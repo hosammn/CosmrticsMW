@@ -227,6 +227,88 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);}
 .notif-send-box{background:var(--card);border:1px solid var(--bor);border-radius:16px;padding:18px;}
 .notif-send-box h3{font-size:17px;font-weight:800;color:var(--gold);margin-bottom:16px;}
 
+/* ── BOTTOM TAB BAR ── */
+.btab-bar{
+  display:flex;
+  position:absolute;
+  bottom:0;left:0;right:0;
+  height:58px;
+  background:var(--card);
+  border-top:1px solid var(--bor);
+  z-index:10;
+}
+.btab{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;background:none;border:none;color:var(--muted);
+  font-family:Tajawal,sans-serif;font-size:11px;font-weight:700;cursor:pointer;
+  transition:.2s;
+}
+.btab span{ font-size:11px; }
+.btab.active{ color:var(--gold); }
+.tab-content{ padding-bottom:70px !important; }
+
+/* ── REELS ── */
+#reels-container{
+  scroll-snap-type:y mandatory;
+  -webkit-overflow-scrolling:touch;
+}
+.reel-slide{
+  height:calc(100vh - 116px);
+  scroll-snap-align:start;
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#000;
+  overflow:hidden;
+}
+.reel-slide iframe{
+  width:100%;
+  height:100%;
+  border:none;
+  pointer-events:auto;
+}
+.reel-info{
+  position:absolute;
+  bottom:0;left:0;right:0;
+  padding:20px 16px 24px;
+  background:linear-gradient(transparent, rgba(0,0,0,.85));
+  color:#fff;
+  direction:rtl;
+}
+.reel-name{ font-size:17px;font-weight:900;margin-bottom:4px; }
+.reel-desc{ font-size:13px;opacity:.85;margin-bottom:10px;line-height:1.6; }
+.reel-bottom{ display:flex;align-items:center;justify-content:space-between; }
+.reel-price{ font-size:18px;font-weight:900;color:var(--gold); }
+.reel-add{
+  background:var(--gold);color:#1a1e17;
+  border:none;border-radius:50px;
+  padding:10px 20px;
+  font-family:Tajawal,sans-serif;font-size:14px;font-weight:900;
+  cursor:pointer;display:flex;align-items:center;gap:6px;
+}
+.reel-empty{ color:var(--muted);text-align:center;padding:60px 20px;font-size:15px; }
+
+/* admin reels list */
+.reel-admin-card{
+  background:var(--card);border:1px solid var(--bor);border-radius:13px;
+  padding:14px;margin-bottom:12px;display:flex;gap:12px;align-items:flex-start;
+}
+.reel-admin-thumb{
+  width:70px;height:70px;border-radius:10px;background:var(--bg3);
+  display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;
+  overflow:hidden;
+}
+.reel-admin-thumb img{ width:100%;height:100%;object-fit:cover; }
+.reel-admin-info{ flex:1; }
+.reel-admin-name{ font-size:15px;font-weight:900;margin-bottom:3px; }
+.reel-admin-price{ font-size:13px;color:var(--gold);font-weight:700; }
+.reel-admin-del{
+  background:rgba(224,82,82,.1);border:1px solid rgba(224,82,82,.25);
+  color:#E05252;padding:6px 12px;border-radius:8px;
+  font-family:Tajawal,sans-serif;font-size:12px;cursor:pointer;white-space:nowrap;
+}
+
 /* WHATSAPP FLOAT */
 .wa-float{
   position:fixed;
@@ -333,10 +415,22 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);}
       <button class="ibtn" onclick="doLogout()">🚪</button>
     </div>
   </div>
-  <div class="body">
+  <!-- Bottom tab bar -->
+  <div class="btab-bar">
+    <button class="btab active" id="btab-store" onclick="switchTab('store')">🛍️<span>المتجر</span></button>
+    <button class="btab" id="btab-reels" onclick="switchTab('reels')">🎬<span>ريلز</span></button>
+  </div>
+
+  <!-- Store tab content -->
+  <div class="body tab-content" id="tab-store-content">
     <div class="welcome"><p id="greet">مرحباً!</p><h2>تصفح منتجات التجميل ✨</h2></div>
     <div class="srch"><div class="sbox"><span>🔍</span><input type="text" placeholder="ابحث عن منتج..." oninput="filterProds(this.value)"></div></div>
     <div class="grid" id="pgrid"></div>
+  </div>
+
+  <!-- Reels tab content -->
+  <div class="body tab-content" id="tab-reels-content" style="display:none;padding:0;">
+    <div id="reels-container" style="height:100%;overflow-y:scroll;scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch;"></div>
   </div>
 </div>
 
@@ -374,6 +468,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);}
     <button class="atab"   onclick="aTab('prods',this)">📦 المنتجات</button>
     <button class="atab"   onclick="aTab('custs',this)">👥 العملاء</button>
     <button class="atab"   onclick="aTab('notifs',this)">🔔 الإشعارات</button>
+        <button class="atab"   onclick="aTab('reels',this)">🎬 الريلز</button>
   </div>
   <div class="body">
 
@@ -436,6 +531,21 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);}
       </div>
       <p class="slbl" style="margin-top:20px;">الإشعارات المرسلة</p>
       <div id="sent-notifs"></div>
+    </div>
+
+    <!-- REELS PANEL -->
+    <div id="tab-reels" class="apanel">
+      <div class="notif-send-box">
+        <h3>🎬 إضافة ريل جديد</h3>
+        <div class="f"><label>اسم المنتج</label><input id="rl-name" type="text" placeholder="مثال: كريم الوجه الذهبي"></div>
+        <div class="f"><label>وصف قصير</label><textarea id="rl-desc" style="width:100%;background:var(--bg3);border:1.5px solid var(--bor);color:var(--txt);padding:11px 13px;border-radius:10px;font-family:Tajawal,sans-serif;font-size:14px;outline:none;resize:vertical;min-height:70px;" placeholder="اكتب وصفاً للمنتج..."></textarea></div>
+        <div class="f"><label>السعر (د.ع)</label><input id="rl-price" type="number" placeholder="مثال: 25000" inputmode="numeric"></div>
+        <div class="f"><label>رابط الفيديو (يوتيوب / تيك توك / انستقرام)</label><input id="rl-url" type="url" placeholder="https://..."></div>
+        <div class="err" id="rl-err"></div>
+        <button class="sbtn" onclick="addReel()">📤 نشر الريل</button>
+      </div>
+      <p class="slbl" style="margin-top:20px;">الريلزات المنشورة</p>
+      <div id="reels-admin-list"></div>
     </div>
 
   </div>
@@ -1931,6 +2041,199 @@ window.saveAddr = async function(){
   }catch(e2){ err.textContent='❌ خطأ: '+e2.message; err.style.display='block'; }
 };
 
+
+// ══════════════════════════════════════
+//  REELS
+// ══════════════════════════════════════
+var reels = [];
+
+function initReelsListener(){
+  onSnapshot(collection(db,'reels'), function(snap){
+    reels=[];
+    snap.forEach(function(d){ var r=d.data(); r.id=d.id; reels.push(r); });
+    reels.sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+    if(document.getElementById('tab-reels-content').style.display!=='none') renderReels();
+    if(document.getElementById('tab-reels') && document.getElementById('tab-reels').classList.contains('on')) renderAdminReels();
+  });
+}
+
+// Convert any video URL to embeddable URL
+function toEmbedUrl(url){
+  if(!url) return '';
+  // YouTube
+  var yt = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/|embed\/))([A-Za-z0-9_-]{11})/);
+  if(yt) return 'https://www.youtube.com/embed/'+yt[1]+'?autoplay=1&mute=1&loop=1&playlist='+yt[1]+'&controls=1&playsinline=1';
+  // TikTok
+  var tt = url.match(/tiktok\.com\/@[^\/]+\/video\/(\d+)/);
+  if(tt) return 'https://www.tiktok.com/embed/v2/'+tt[1];
+  // Instagram Reels
+  var ig = url.match(/instagram\.com\/(?:reel|p)\/([A-Za-z0-9_-]+)/);
+  if(ig) return 'https://www.instagram.com/p/'+ig[1]+'/embed/';
+  // Already embed
+  if(url.includes('embed')) return url;
+  return url;
+}
+
+function getVideoThumb(url){
+  var yt = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/|embed\/))([A-Za-z0-9_-]{11})/);
+  if(yt) return 'https://img.youtube.com/vi/'+yt[1]+'/mqdefault.jpg';
+  return '';
+}
+
+function renderReels(){
+  var el = document.getElementById('reels-container');
+  if(!el) return;
+  if(!reels.length){
+    el.innerHTML='<div class="reel-empty">🎬<br><br>لا توجد ريلزات بعد</div>';
+    return;
+  }
+  el.innerHTML='';
+  reels.forEach(function(r){
+    var slide = document.createElement('div');
+    slide.className = 'reel-slide';
+
+    var embedUrl = toEmbedUrl(r.url||'');
+    var iframe = document.createElement('iframe');
+    iframe.src = embedUrl;
+    iframe.allow = 'autoplay; fullscreen; encrypted-media; picture-in-picture';
+    iframe.allowFullscreen = true;
+    iframe.setAttribute('playsinline','1');
+    slide.appendChild(iframe);
+
+    var info = document.createElement('div');
+    info.className = 'reel-info';
+
+    var name = document.createElement('div');
+    name.className = 'reel-name';
+    name.textContent = r.name;
+
+    var desc = document.createElement('div');
+    desc.className = 'reel-desc';
+    desc.textContent = r.desc||'';
+
+    var bottom = document.createElement('div');
+    bottom.className = 'reel-bottom';
+
+    var price = document.createElement('div');
+    price.className = 'reel-price';
+    price.textContent = Number(r.price).toLocaleString()+' د.ع';
+
+    var addBtn = document.createElement('button');
+    addBtn.className = 'reel-add';
+    addBtn.innerHTML = '+ أضف للسلة';
+    (function(reel){
+      addBtn.addEventListener('click', function(){
+        addToCartFromReel(reel);
+      });
+    })(r);
+
+    bottom.appendChild(price);
+    bottom.appendChild(addBtn);
+    info.appendChild(name);
+    if(r.desc) info.appendChild(desc);
+    info.appendChild(bottom);
+    slide.appendChild(info);
+    el.appendChild(slide);
+  });
+}
+
+function addToCartFromReel(r){
+  var existing = cart.find(function(c){ return c.id===r.id; });
+  if(existing){ existing.qty++; }
+  else { cart.push({id:r.id, name:r.name, price:Number(r.price), qty:1, img:''}); }
+  saveCart();
+  updateBadge();
+  showToast('✅ أُضيف إلى السلة');
+}
+
+function switchTab(tab){
+  var storeContent  = document.getElementById('tab-store-content');
+  var reelsContent  = document.getElementById('tab-reels-content');
+  var btnStore = document.getElementById('btab-store');
+  var btnReels = document.getElementById('btab-reels');
+
+  if(tab==='store'){
+    storeContent.style.display='block';
+    reelsContent.style.display='none';
+    btnStore.classList.add('active');
+    btnReels.classList.remove('active');
+  } else {
+    storeContent.style.display='none';
+    reelsContent.style.display='block';
+    btnStore.classList.remove('active');
+    btnReels.classList.add('active');
+    renderReels();
+  }
+}
+
+// ADMIN
+window.addReel = async function(){
+  var name  = document.getElementById('rl-name').value.trim();
+  var desc  = document.getElementById('rl-desc').value.trim();
+  var price = document.getElementById('rl-price').value.trim();
+  var url   = document.getElementById('rl-url').value.trim();
+  var err   = document.getElementById('rl-err');
+
+  if(!name)  { err.textContent='❌ أدخل اسم المنتج'; err.style.display='block'; return; }
+  if(!price) { err.textContent='❌ أدخل السعر';      err.style.display='block'; return; }
+  if(!url)   { err.textContent='❌ أدخل رابط الفيديو'; err.style.display='block'; return; }
+
+  err.style.display='none';
+  var rid = 'r'+Date.now();
+  try{
+    await setDoc(doc(db,'reels',rid),{
+      name:name, desc:desc, price:Number(price), url:url, ts:Date.now()
+    });
+    document.getElementById('rl-name').value='';
+    document.getElementById('rl-desc').value='';
+    document.getElementById('rl-price').value='';
+    document.getElementById('rl-url').value='';
+    showToast('✅ تم نشر الريل');
+    renderAdminReels();
+  }catch(e){ err.textContent='❌ خطأ: '+e.message; err.style.display='block'; }
+};
+
+function renderAdminReels(){
+  var el = document.getElementById('reels-admin-list');
+  if(!el) return;
+  if(!reels.length){ el.innerHTML='<div class="no-data" style="padding:20px">لا توجد ريلزات منشورة</div>'; return; }
+  el.innerHTML='';
+  reels.forEach(function(r){
+    var card = document.createElement('div');
+    card.className = 'reel-admin-card';
+
+    var thumb = document.createElement('div');
+    thumb.className = 'reel-admin-thumb';
+    var tUrl = getVideoThumb(r.url||'');
+    if(tUrl){ var img=document.createElement('img'); img.src=tUrl; thumb.appendChild(img); }
+    else { thumb.textContent='🎬'; }
+
+    var info = document.createElement('div');
+    info.className = 'reel-admin-info';
+    info.innerHTML='<div class="reel-admin-name">'+esc(r.name)+'</div>'+
+      '<div class="reel-admin-price">'+Number(r.price).toLocaleString()+' د.ع</div>'+
+      '<div style="font-size:11px;color:var(--muted);margin-top:4px;">'+esc(r.desc||'')+'</div>';
+
+    var del = document.createElement('button');
+    del.className = 'reel-admin-del';
+    del.textContent = 'حذف';
+    (function(rid){ del.addEventListener('click', function(){ deleteReel(rid); }); })(r.id);
+
+    card.appendChild(thumb);
+    card.appendChild(info);
+    card.appendChild(del);
+    el.appendChild(card);
+  });
+}
+
+window.deleteReel = async function(rid){
+  try{
+    await deleteDoc(doc(db,'reels',rid));
+    showToast('🗑️ تم حذف الريل');
+    renderAdminReels();
+  }catch(e){ showToast('❌ خطأ: '+e.message); }
+};
+
 // ── BOOT ──
 async function boot(){
   var timedOut=false;
@@ -1985,6 +2288,7 @@ async function boot(){
 
     // Notifications listener
     initNotifsListener();
+  initReelsListener();
 
     // Restore session
     try{
