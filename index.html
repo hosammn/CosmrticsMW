@@ -17,7 +17,7 @@
 *{margin:0;padding:0;box-sizing:border-box;}
 html,body{height:100%;overflow:hidden;}
 body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);}
-.screen{display:none;height:100vh;flex-direction:column;overflow:hidden;position:relative;}
+.screen{display:none;height:100vh;flex-direction:column;overflow:hidden;}
 .screen.active{display:flex;}
 .body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
 
@@ -230,55 +230,30 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);}
 /* ── BOTTOM TAB BAR ── */
 .btab-bar{
   display:flex;
-  height:60px;
-  flex-shrink:0;
+  position:absolute;
+  bottom:0;left:0;right:0;
+  height:58px;
   background:var(--card);
-  border-top:2px solid var(--bor);
+  border-top:1px solid var(--bor);
   z-index:10;
 }
 .btab{
   flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:4px;background:none;border:none;color:var(--muted);
-  font-family:Tajawal,sans-serif;font-size:12px;font-weight:700;cursor:pointer;
-  transition:color .2s, background .2s;
-  position:relative;overflow:hidden;
-  -webkit-tap-highlight-color:transparent;
+  gap:3px;background:none;border:none;color:var(--muted);
+  font-family:Tajawal,sans-serif;font-size:11px;font-weight:700;cursor:pointer;
+  transition:.2s;
 }
-.btab span{ font-size:12px; }
+.btab span{ font-size:11px; }
 .btab.active{ color:var(--gold); }
-.btab.active::after{
-  content:'';
-  position:absolute;
-  top:0;left:25%;right:25%;
-  height:3px;
-  background:var(--gold);
-  border-radius:0 0 4px 4px;
-}
-/* Ripple */
-.btab::before{
-  content:'';
-  position:absolute;
-  inset:0;
-  background:var(--gold);
-  opacity:0;
-  transition:opacity .3s;
-  border-radius:12px;
-}
-.btab:active::before{ opacity:.12; }
-/* separator between tabs */
-.btab:not(:last-child){
-  border-left:1px solid var(--bor);
-}
+.tab-content{ padding-bottom:70px !important; }
 
 /* ── REELS ── */
 #reels-container{
   scroll-snap-type:y mandatory;
   -webkit-overflow-scrolling:touch;
-  height:100%;
-  overflow-y:scroll;
 }
 .reel-slide{
-  height:100%;
+  height:calc(100vh - 116px);
   scroll-snap-align:start;
   position:relative;
   display:flex;
@@ -337,7 +312,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);}
 /* WHATSAPP FLOAT */
 .wa-float{
   position:fixed;
-  bottom:80px;
+  bottom:24px;
   left:20px;
   width:52px;height:52px;
   background:#25D366;
@@ -440,28 +415,22 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);}
       <button class="ibtn" onclick="doLogout()">🚪</button>
     </div>
   </div>
-
-  <!-- Tab contents wrapper -->
-  <div style="flex:1;overflow:hidden;display:flex;flex-direction:column;">
-
-    <!-- Store tab -->
-    <div id="tab-store-content" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:10px;">
-      <div class="welcome"><p id="greet">مرحباً!</p><h2>تصفح منتجات التجميل ✨</h2></div>
-      <div class="srch"><div class="sbox"><span>🔍</span><input type="text" placeholder="ابحث عن منتج..." oninput="filterProds(this.value)"></div></div>
-      <div class="grid" id="pgrid"></div>
-    </div>
-
-    <!-- Reels tab -->
-    <div id="tab-reels-content" style="flex:1;overflow:hidden;display:none;">
-      <div id="reels-container" style="height:100%;overflow-y:scroll;scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch;"></div>
-    </div>
-
-  </div>
-
   <!-- Bottom tab bar -->
   <div class="btab-bar">
     <button class="btab active" id="btab-store" onclick="switchTab('store')">🛍️<span>المتجر</span></button>
     <button class="btab" id="btab-reels" onclick="switchTab('reels')">🎬<span>ريلز</span></button>
+  </div>
+
+  <!-- Store tab content -->
+  <div class="body tab-content" id="tab-store-content">
+    <div class="welcome"><p id="greet">مرحباً!</p><h2>تصفح منتجات التجميل ✨</h2></div>
+    <div class="srch"><div class="sbox"><span>🔍</span><input type="text" placeholder="ابحث عن منتج..." oninput="filterProds(this.value)"></div></div>
+    <div class="grid" id="pgrid"></div>
+  </div>
+
+  <!-- Reels tab content -->
+  <div class="body tab-content" id="tab-reels-content" style="display:none;padding:0;">
+    <div id="reels-container" style="height:100%;overflow-y:scroll;scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch;"></div>
   </div>
 </div>
 
@@ -2178,19 +2147,19 @@ function addToCartFromReel(r){
 }
 
 function switchTab(tab){
-  var storeContent = document.getElementById('tab-store-content');
-  var reelsContent = document.getElementById('tab-reels-content');
-  var btnStore     = document.getElementById('btab-store');
-  var btnReels     = document.getElementById('btab-reels');
+  var storeContent  = document.getElementById('tab-store-content');
+  var reelsContent  = document.getElementById('tab-reels-content');
+  var btnStore = document.getElementById('btab-store');
+  var btnReels = document.getElementById('btab-reels');
 
   if(tab==='store'){
-    storeContent.style.display = 'block';
-    reelsContent.style.display = 'none';
+    storeContent.style.display='block';
+    reelsContent.style.display='none';
     btnStore.classList.add('active');
     btnReels.classList.remove('active');
   } else {
-    storeContent.style.display = 'none';
-    reelsContent.style.display = 'block';
+    storeContent.style.display='none';
+    reelsContent.style.display='block';
     btnStore.classList.remove('active');
     btnReels.classList.add('active');
     renderReels();
