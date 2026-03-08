@@ -773,6 +773,23 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);}
   </div>
 </div>
 
+<!-- EDIT REEL MODAL -->
+<div class="ov" id="edit-reel-ov">
+  <div class="modal">
+    <h3>✏️ تعديل الريل</h3>
+    <input type="hidden" id="er-id">
+    <div class="f"><label>اسم المنتج</label><input id="er-name" type="text" placeholder="اسم المنتج"></div>
+    <div class="f"><label>وصف قصير</label><textarea id="er-desc" style="width:100%;background:var(--bg3);border:1.5px solid var(--bor);color:var(--txt);padding:11px 13px;border-radius:10px;font-family:Tajawal,sans-serif;font-size:14px;outline:none;resize:vertical;min-height:70px;" placeholder="الوصف"></textarea></div>
+    <div class="f"><label>السعر (د.ع)</label><input id="er-price" type="number" inputmode="numeric"></div>
+    <div class="f"><label>رابط الفيديو</label><input id="er-url" type="url" placeholder="https://..."></div>
+    <div class="err" id="er-err"></div>
+    <div class="mbtns">
+      <button class="mc" onclick="closeModal('edit-reel-ov')">إلغاء</button>
+      <button class="mo" onclick="saveEditReel()">💾 حفظ</button>
+    </div>
+  </div>
+</div>
+
 <!-- ADD/EDIT ADDRESS MODAL -->
 <div class="ov" id="addr-ov">
   <div class="modal">
@@ -1224,6 +1241,7 @@ window.aTab=function(name,el){
   if(name==='custs')  renderCustomers();
   if(name==='prods')  renderProds();
   if(name==='notifs') renderSentNotifs();
+  if(name==='reels')  renderAdminReels();
 };
 
 function renderAdmin(){
@@ -2288,7 +2306,10 @@ window.addReel = async function(){
 function renderAdminReels(){
   var el = document.getElementById('reels-admin-list');
   if(!el) return;
-  if(!reels.length){ el.innerHTML='<div class="no-data" style="padding:20px">لا توجد ريلزات منشورة</div>'; return; }
+  if(!reels.length){
+    el.innerHTML='<div class="no-data" style="padding:20px">لا توجد ريلزات منشورة</div>';
+    return;
+  }
   el.innerHTML='';
   reels.forEach(function(r){
     var card = document.createElement('div');
@@ -2304,16 +2325,26 @@ function renderAdminReels(){
     info.className = 'reel-admin-info';
     info.innerHTML='<div class="reel-admin-name">'+esc(r.name)+'</div>'+
       '<div class="reel-admin-price">'+Number(r.price).toLocaleString()+' د.ع</div>'+
-      '<div style="font-size:11px;color:var(--muted);margin-top:4px;">'+esc(r.desc||'')+'</div>';
+      (r.desc?'<div style="font-size:11px;color:var(--muted);margin-top:3px;">'+esc(r.desc)+'</div>':'');
 
-    var del = document.createElement('button');
-    del.className = 'reel-admin-del';
-    del.textContent = 'حذف';
-    (function(rid){ del.addEventListener('click', function(){ deleteReel(rid); }); })(r.id);
+    var btns = document.createElement('div');
+    btns.style.cssText = 'display:flex;flex-direction:column;gap:6px;flex-shrink:0;';
 
+    var editBtn = document.createElement('button');
+    editBtn.textContent = '✏️ تعديل';
+    editBtn.style.cssText = 'background:var(--bg3);border:1px solid var(--bor);color:var(--txt);padding:6px 10px;border-radius:8px;font-family:Tajawal,sans-serif;font-size:12px;cursor:pointer;white-space:nowrap;';
+    (function(reel){ editBtn.addEventListener('click', function(){ openEditReel(reel); }); })(r);
+
+    var delBtn = document.createElement('button');
+    delBtn.textContent = '🗑️ حذف';
+    delBtn.style.cssText = 'background:rgba(224,82,82,.1);border:1px solid rgba(224,82,82,.25);color:#E05252;padding:6px 10px;border-radius:8px;font-family:Tajawal,sans-serif;font-size:12px;cursor:pointer;white-space:nowrap;';
+    (function(rid){ delBtn.addEventListener('click', function(){ window.deleteReel(rid); }); })(r.id);
+
+    btns.appendChild(editBtn);
+    btns.appendChild(delBtn);
     card.appendChild(thumb);
     card.appendChild(info);
-    card.appendChild(del);
+    card.appendChild(btns);
     el.appendChild(card);
   });
 }
@@ -2324,6 +2355,34 @@ window.deleteReel = async function(rid){
     showToast('🗑️ تم حذف الريل');
     renderAdminReels();
   }catch(e){ showToast('❌ خطأ: '+e.message); }
+};
+
+
+window.openEditReel = function(r){
+  document.getElementById('er-id').value    = r.id;
+  document.getElementById('er-name').value  = r.name;
+  document.getElementById('er-desc').value  = r.desc||'';
+  document.getElementById('er-price').value = r.price;
+  document.getElementById('er-url').value   = r.url||'';
+  var e=document.getElementById('er-err'); e.style.display='none';
+  document.getElementById('edit-reel-ov').classList.add('open');
+};
+
+window.saveEditReel = async function(){
+  var id    = document.getElementById('er-id').value;
+  var name  = document.getElementById('er-name').value.trim();
+  var desc  = document.getElementById('er-desc').value.trim();
+  var price = document.getElementById('er-price').value.trim();
+  var url   = document.getElementById('er-url').value.trim();
+  var err   = document.getElementById('er-err');
+  if(!name)  { err.textContent='❌ أدخل الاسم';   err.style.display='block'; return; }
+  if(!price) { err.textContent='❌ أدخل السعر';   err.style.display='block'; return; }
+  if(!url)   { err.textContent='❌ أدخل الرابط';  err.style.display='block'; return; }
+  try{
+    await updateDoc(doc(db,'reels',id),{name:name,desc:desc,price:Number(price),url:url});
+    closeModal('edit-reel-ov');
+    showToast('✅ تم تحديث الريل');
+  }catch(e2){ err.textContent='❌ خطأ: '+e2.message; err.style.display='block'; }
 };
 
 // ── BOOT ──
