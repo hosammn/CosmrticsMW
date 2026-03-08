@@ -142,6 +142,19 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);}
 .cdet .lb{font-size:10px;color:var(--muted);font-weight:600;margin-bottom:2px;}
 .cdet .vl{font-size:13px;font-weight:700;}
 .cdet.full{grid-column:1/-1;}
+#new-orders-badge{
+  display:none;
+  background:#E05252;color:#fff;
+  border-radius:50%;
+  min-width:18px;height:18px;
+  font-size:11px;font-weight:900;
+  align-items:center;justify-content:center;
+  margin-right:5px;
+  vertical-align:middle;
+  padding:0 3px;
+}
+#new-orders-badge.show{ display:inline-flex !important; }
+
 .online-dot{width:8px;height:8px;background:var(--green);border-radius:50%;display:inline-block;margin-left:5px;vertical-align:middle;}
 .online-txt{font-size:10px;color:var(--green);font-weight:700;vertical-align:middle;}
 
@@ -504,7 +517,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);}
   </div>
   <div class="atabs">
     <button class="atab on" onclick="aTab('stats',this)">📊 إحصائيات</button>
-    <button class="atab"   onclick="aTab('orders',this)">📋 الطلبات</button>
+    <button class="atab"   onclick="aTab('orders',this)" id="atab-orders-btn">📋 الطلبات<span id="new-orders-badge" style="display:none;background:#E05252;color:#fff;border-radius:50%;width:18px;height:18px;font-size:11px;font-weight:900;display:none;align-items:center;justify-content:center;margin-right:4px;vertical-align:middle;"></span></button>
     <button class="atab"   onclick="aTab('done',this)">✅ المجهزة</button>
     <button class="atab"   onclick="aTab('add',this)">➕ إضافة</button>
     <button class="atab"   onclick="aTab('prods',this)">📦 المنتجات</button>
@@ -2385,6 +2398,53 @@ window.saveEditReel = async function(){
   }catch(e2){ err.textContent='❌ خطأ: '+e2.message; err.style.display='block'; }
 };
 
+
+// ══════════════════════════════════════
+//  NEW ORDERS BADGE + WHATSAPP NOTIFY
+// ══════════════════════════════════════
+var lastKnownOrderCount = 0;
+var adminNotified = false;
+
+function updateNewOrdersBadge(pendingCount){
+  var badge = document.getElementById('new-orders-badge');
+  if(!badge) return;
+  if(pendingCount > 0){
+    badge.textContent = pendingCount;
+    badge.classList.add('show');
+  } else {
+    badge.classList.remove('show');
+  }
+}
+
+function notifyAdminNewOrder(order){
+  // Sound beep using Web Audio API
+  try{
+    var ctx = new (window.AudioContext || window.webkitAudioContext)();
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = 880;
+    osc.type = 'sine';
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.5);
+  } catch(e){}
+
+  // Show toast
+  showToast('🛒 طلب جديد من: ' + (order.customer||'عميل'));
+}
+
+// Clear badge when admin opens orders tab
+var _origATab = window.aTab;
+window.aTab = function(name, el){
+  _origATab(name, el);
+  if(name === 'orders'){
+    updateNewOrdersBadge(0);
+  }
+};
+
 // ── BOOT ──
 async function boot(){
   var timedOut=false;
@@ -2431,8 +2491,25 @@ async function boot(){
       if(a&&a.classList.contains('active')) renderAdmin();
     });
     onSnapshot(collection(db,'orders'), function(snap){
+      var prevCount = orders.length;
+      var isFirst   = prevCount === 0 && orders.length === 0;
       orders=[];
       snap.forEach(function(d){ var o=d.data(); o.id=d.id; orders.push(o); });
+
+      // Count new pending orders
+      var pendingOrders = orders.filter(function(o){ return o.status==='pending'; });
+
+      // Update admin badge
+      if(me && me.role==='admin'){
+        updateNewOrdersBadge(pendingOrders.length);
+
+        // Notify via WhatsApp only when a NEW order arrives (not on first load)
+        if(!isFirst && orders.length > prevCount){
+          var newest = orders[orders.length-1];
+          notifyAdminNewOrder(newest);
+        }
+      }
+
       var a=document.getElementById('admin');
       if(a&&a.classList.contains('active')) renderAdmin();
     });
