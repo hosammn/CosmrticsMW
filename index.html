@@ -476,8 +476,15 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);}
     </div>
 
     <!-- Reels tab -->
-    <div id="tab-reels-content" style="flex:1;overflow:hidden;display:none;">
-      <div id="reels-container" style="height:100%;overflow-y:scroll;scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch;"></div>
+    <div id="tab-reels-content" style="flex:1;overflow:hidden;display:none;flex-direction:column;">
+      <div style="padding:10px 12px 6px;flex-shrink:0;">
+        <div style="position:relative;">
+          <input id="store-reel-search" type="text" placeholder="🔍 ابحث في الريلزات..." oninput="filterStoreReels(this.value)"
+            style="width:100%;box-sizing:border-box;padding:10px 40px 10px 14px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;border-radius:12px;font-family:Tajawal,sans-serif;font-size:14px;outline:none;">
+          <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:15px;pointer-events:none;">🔍</span>
+        </div>
+      </div>
+      <div id="reels-container" style="flex:1;overflow-y:scroll;scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch;"></div>
     </div>
 
   </div>
@@ -519,7 +526,6 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);}
     <button class="atab on" onclick="aTab('stats',this)">📊 إحصائيات</button>
     <button class="atab"   onclick="aTab('orders',this)" id="atab-orders-btn">📋 الطلبات<span id="new-orders-badge" style="display:none;background:#E05252;color:#fff;border-radius:50%;width:18px;height:18px;font-size:11px;font-weight:900;display:none;align-items:center;justify-content:center;margin-right:4px;vertical-align:middle;"></span></button>
     <button class="atab"   onclick="aTab('done',this)">✅ المجهزة</button>
-    <button class="atab"   onclick="aTab('add',this)">➕ إضافة</button>
     <button class="atab"   onclick="aTab('prods',this)">📦 المنتجات</button>
     <button class="atab"   onclick="aTab('custs',this)">👥 العملاء</button>
     <button class="atab"   onclick="aTab('notifs',this)">🔔 الإشعارات</button>
@@ -549,9 +555,26 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);}
       <div id="done-panel"></div>
     </div>
 
-    <div id="tab-add" class="apanel">
-      <div class="aform">
-        <h3>➕ إضافة منتج جديد</h3>
+    
+
+    <div id="tab-prods" class="apanel">
+  <!-- Search bar -->
+  <div style="padding:12px 12px 0;">
+    <div style="position:relative;">
+      <input id="admin-prod-search" type="text" placeholder="🔍 بحث في المنتجات..." oninput="filterAdminProds()"
+        style="width:100%;box-sizing:border-box;padding:11px 40px 11px 14px;background:var(--bg3);border:1.5px solid var(--bor);color:var(--txt);border-radius:12px;font-family:Tajawal,sans-serif;font-size:14px;outline:none;">
+      <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:16px;pointer-events:none;">🔍</span>
+    </div>
+  </div>
+
+  <!-- Add product form (collapsible) -->
+  <div style="padding:12px;">
+    <button onclick="toggleAddForm()" id="toggle-add-btn"
+      style="width:100%;padding:12px;background:linear-gradient(135deg,var(--gold),#b8860b);color:#fff;border:none;border-radius:12px;font-family:Tajawal,sans-serif;font-size:15px;font-weight:700;cursor:pointer;">
+      ➕ إضافة منتج جديد
+    </button>
+    <div id="add-prod-form" style="display:none;margin-top:12px;">
+      <div class="aform" style="margin:0;">
         <div class="iup" id="iup">
           <div class="di">📷</div>
           <p>اضغط لرفع صورة المنتج</p>
@@ -561,15 +584,16 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);}
         <div class="f"><label>اسم المنتج</label><input id="p-name" type="text" placeholder="اسم المنتج"></div>
         <div class="f"><label>الوصف</label><input id="p-desc" type="text" placeholder="وصف مختصر للمنتج"></div>
         <div class="f"><label>السعر (دينار عراقي)</label><input id="p-price" type="number" placeholder="مثال: 15000" inputmode="numeric"></div>
+        <div class="f"><label>سعر التخفيض (اتركه فارغاً إن لم يوجد خصم)</label><input id="p-discount" type="number" placeholder="مثال: 12000" inputmode="numeric"></div>
         <div class="err" id="p-err"></div>
         <button class="sbtn" onclick="addProduct()">إضافة المنتج ✓</button>
       </div>
     </div>
+  </div>
 
-    <div id="tab-prods" class="apanel">
-      <p class="slbl">المنتجات المضافة</p>
-      <div id="aplist"></div>
-    </div>
+  <!-- Products grid like reels -->
+  <div id="aplist" style="padding:0 12px 12px;"></div>
+</div>
 
     <div id="tab-custs" class="apanel">
       <p class="slbl">قائمة العملاء المسجلين</p>
@@ -595,12 +619,20 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);}
         <div class="f"><label>اسم المنتج</label><input id="rl-name" type="text" placeholder="مثال: كريم الوجه الذهبي"></div>
         <div class="f"><label>وصف قصير</label><textarea id="rl-desc" style="width:100%;background:var(--bg3);border:1.5px solid var(--bor);color:var(--txt);padding:11px 13px;border-radius:10px;font-family:Tajawal,sans-serif;font-size:14px;outline:none;resize:vertical;min-height:70px;" placeholder="اكتب وصفاً للمنتج..."></textarea></div>
         <div class="f"><label>السعر (د.ع)</label><input id="rl-price" type="number" placeholder="مثال: 25000" inputmode="numeric"></div>
+        <div class="f"><label>سعر التخفيض (اتركه فارغاً إن لم يوجد خصم)</label><input id="rl-discount" type="number" inputmode="numeric" placeholder="مثال: 20000"></div>
         <div class="f"><label>رابط الفيديو (يوتيوب / تيك توك / انستقرام)</label><input id="rl-url" type="url" placeholder="https://..."></div>
         <div class="err" id="rl-err"></div>
         <button class="sbtn" onclick="addReel()">📤 نشر الريل</button>
       </div>
       <p class="slbl" style="margin-top:20px;">الريلزات المنشورة</p>
-      <div id="reels-admin-list"></div>
+      <div style="padding:12px 12px 0;">
+    <div style="position:relative;">
+      <input id="admin-reel-search" type="text" placeholder="🔍 بحث في الريلزات..." oninput="filterAdminReels()"
+        style="width:100%;box-sizing:border-box;padding:11px 40px 11px 14px;background:var(--bg3);border:1.5px solid var(--bor);color:var(--txt);border-radius:12px;font-family:Tajawal,sans-serif;font-size:14px;outline:none;">
+      <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:16px;pointer-events:none;">🔍</span>
+    </div>
+  </div>
+  <div id="reels-admin-list"></div>
     </div>
 
   </div>
@@ -1102,9 +1134,17 @@ function renderStore(list){
     var footDiv = document.createElement('div');
     footDiv.className = 'pc-foot';
 
+    // Discount badge on image
+    if(p.discount && p.discount < p.price){
+      var badgeEl = document.createElement('div');
+      badgeEl.innerHTML = discountBadgeHTML(p.price, p.discount);
+      imgDiv.style.position = 'relative';
+      imgDiv.appendChild(badgeEl.firstChild);
+    }
+
     var priceDiv = document.createElement('div');
     priceDiv.className = 'pc-price';
-    priceDiv.textContent = Number(p.price).toLocaleString() + ' د.ع';
+    priceDiv.innerHTML = priceHTML(p.price, p.discount);
 
     var plusBtn = document.createElement('button');
     plusBtn.className = 'plus';
@@ -1254,6 +1294,11 @@ window.aTab=function(name,el){
   if(name==='custs')  renderCustomers();
   if(name==='prods')  renderProds();
   if(name==='notifs') renderSentNotifs();
+  if(name==='prods'){
+    renderProds();
+    document.getElementById('add-prod-form').style.display='none';
+    document.getElementById('toggle-add-btn').innerHTML='➕ إضافة منتج جديد';
+  }
   if(name==='reels')  renderAdminReels();
 };
 
@@ -1391,16 +1436,21 @@ window.loadImg=function(input){
 window.addProduct=async function(){
   var name=val('p-name'),desc=val('p-desc');
   var price=parseFloat(document.getElementById('p-price').value);
+  var discountVal=document.getElementById('p-discount').value;
+  var discount=discountVal?parseFloat(discountVal):null;
   if(!name)                    return showErr('p-err','❌ يرجى إدخال اسم المنتج');
   if(!desc)                    return showErr('p-err','❌ يرجى إدخال وصف المنتج');
   if(isNaN(price)||price<=0)   return showErr('p-err','❌ يرجى إدخال سعر صحيح');
+  if(discount!==null && (isNaN(discount)||discount<=0||discount>=price))
+    return showErr('p-err','❌ سعر التخفيض يجب أن يكون أقل من السعر الأصلي');
   var pid='p'+Date.now();
   var prod={id:pid,name:name,desc:desc,price:price,img:pendingImg||null};
+  if(discount) prod.discount=discount;
   await setDoc(doc(db,'products',pid),prod);
-  // Don't push manually — onSnapshot will update products array
   document.getElementById('p-name').value='';
   document.getElementById('p-desc').value='';
   document.getElementById('p-price').value='';
+  document.getElementById('p-discount').value='';
   document.querySelector('#iup input[type=file]').value='';
   var pi=document.getElementById('pimg'); pi.src=''; pi.style.display='none';
   document.querySelector('#iup .di').style.display='';
@@ -1410,22 +1460,41 @@ window.addProduct=async function(){
   renderAdmin();
 };
 
-function renderProds(){
-  var pl=document.getElementById('aplist');
-  if(!products.length){ pl.innerHTML='<div class="no-data">📦<br>لا توجد منتجات مضافة</div>'; return; }
-  var h='';
-  products.slice().reverse().forEach(function(p){
-    h+='<div class="ap" style="cursor:pointer;" onclick="openProdDetail(\''+p.id+'\',\'admin\')">'+
-      '<div class="ap-img">'+(p.img?'<img src="'+p.img+'">'  :'🛍️')+'</div>'+
-      '<div class="ap-info">'+
-        '<div class="ap-name">'+esc(p.name)+'</div>'+
-        '<div class="ap-price">'+Number(p.price).toLocaleString()+' د.ع</div>'+
-        '<div class="ap-desc">'+esc(p.desc)+'</div>'+
+function renderProds(query){
+  var pl = document.getElementById('aplist');
+  if(!pl) return;
+  var list = products.slice().reverse();
+  if(query){
+    var q = query.trim().toLowerCase();
+    list = list.filter(function(p){
+      return (p.name||'').toLowerCase().includes(q) || (p.desc||'').toLowerCase().includes(q);
+    });
+  }
+  if(!list.length){
+    pl.innerHTML = '<div class="no-data" style="padding:20px">📦<br>'+(query?'لا توجد نتائج':'لا توجد منتجات مضافة')+'</div>';
+    return;
+  }
+  // Grid 2-column card style
+  var h = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">';
+  list.forEach(function(p){
+    h += '<div style="background:var(--bg2);border-radius:14px;overflow:hidden;border:1px solid var(--bor);position:relative;">'+
+      discountBadgeHTML(p.price,p.discount)+
+      '<div style="aspect-ratio:1;overflow:hidden;background:var(--bg3);">'+
+        (p.img ? '<img src="'+p.img+'" style="width:100%;height:100%;object-fit:cover;">' : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:40px;">🛍️</div>')+
       '</div>'+
-      '<button class="dpbtn" onclick="delProd(\''+p.id+'\')">🗑️</button>'+
+      '<div style="padding:8px;">'+
+        '<div style="font-size:13px;font-weight:700;color:var(--txt);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+esc(p.name)+'</div>'+
+        '<div style="font-size:12px;font-weight:700;">'+priceHTML(p.price,p.discount)+'</div>'+
+        (p.desc?'<div style="font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+esc(p.desc)+'</div>':'')+
+      '</div>'+
+      '<div style="display:flex;gap:6px;padding:0 8px 8px;">'+
+        '<button onclick="openProdDetail(\"'+p.id+'\",\"admin\")" style="flex:1;padding:6px;background:var(--bg3);border:1px solid var(--bor);color:var(--txt);border-radius:8px;font-family:Tajawal,sans-serif;font-size:12px;cursor:pointer;">✏️ تعديل</button>'+
+        '<button onclick="delProd(\"'+p.id+'\")" style="padding:6px 10px;background:rgba(224,82,82,.1);border:1px solid rgba(224,82,82,.25);color:#E05252;border-radius:8px;font-family:Tajawal,sans-serif;font-size:12px;cursor:pointer;">🗑️</button>'+
+      '</div>'+
     '</div>';
   });
-  pl.innerHTML=h;
+  h += '</div>';
+  pl.innerHTML = h;
 }
 window.delProd=async function(id){
   await deleteDoc(doc(db,'products',id));
@@ -1695,9 +1764,16 @@ window.openProdDetail = function(pid, from) {
   } else {
     imgWrap.innerHTML = '<div class="pd-emoji">🛍️</div>';
   }
+  // Discount badge on detail image
+  if(p.discount && p.discount < p.price){
+    var db2 = document.createElement('div');
+    db2.innerHTML = discountBadgeHTML(p.price, p.discount);
+    imgWrap.style.position = 'relative';
+    imgWrap.appendChild(db2.firstChild);
+  }
 
   document.getElementById('pd-name').textContent  = p.name;
-  document.getElementById('pd-price').textContent = Number(p.price).toLocaleString()+' د.ع';
+  document.getElementById('pd-price').innerHTML = priceHTML(p.price, p.discount);
   document.getElementById('pd-desc').textContent  = p.desc;
 
   // Back button
@@ -2153,15 +2229,19 @@ function getVideoThumb(url){
 }
 
 function renderReels(){
+  renderReelsList(reels);
+}
+
+function renderReelsList(list){
   var el = document.getElementById('reels-container');
   if(!el) return;
-  if(!reels.length){
-    el.innerHTML='<div class="reel-empty">🎬<br><br>لا توجد ريلزات بعد</div>';
+  if(!list.length){
+    el.innerHTML='<div class="reel-empty">🎬<br><br>'+(document.getElementById('store-reel-search')&&document.getElementById('store-reel-search').value ? 'لا توجد نتائج' : 'لا توجد ريلزات بعد')+'</div>';
     return;
   }
   el.innerHTML='';
 
-  reels.forEach(function(r, index){
+  list.forEach(function(r, index){
     var slide = document.createElement('div');
     slide.className = 'reel-slide';
 
@@ -2221,7 +2301,7 @@ function renderReels(){
 
     var price = document.createElement('div');
     price.className = 'reel-price';
-    price.textContent = Number(r.price).toLocaleString()+' د.ع';
+    price.innerHTML = priceHTML(r.price, r.discount);
 
     var addBtn = document.createElement('button');
     addBtn.className = 'reel-add';
@@ -2291,32 +2371,37 @@ window.switchTab = function switchTab(tab){
 
 // ADMIN
 window.addReel = async function(){
-  var name  = document.getElementById('rl-name').value.trim();
-  var desc  = document.getElementById('rl-desc').value.trim();
-  var price = document.getElementById('rl-price').value.trim();
-  var url   = document.getElementById('rl-url').value.trim();
-  var err   = document.getElementById('rl-err');
+  var name     = document.getElementById('rl-name').value.trim();
+  var desc     = document.getElementById('rl-desc').value.trim();
+  var price    = document.getElementById('rl-price').value.trim();
+  var discountVal = document.getElementById('rl-discount').value.trim();
+  var url      = document.getElementById('rl-url').value.trim();
+  var err      = document.getElementById('rl-err');
 
-  if(!name)  { err.textContent='❌ أدخل اسم المنتج'; err.style.display='block'; return; }
-  if(!price) { err.textContent='❌ أدخل السعر';      err.style.display='block'; return; }
-  if(!url)   { err.textContent='❌ أدخل رابط الفيديو'; err.style.display='block'; return; }
+  if(!name)  { err.textContent='❌ أدخل اسم المنتج';   err.style.display='block'; return; }
+  if(!price) { err.textContent='❌ أدخل السعر';         err.style.display='block'; return; }
+  if(!url)   { err.textContent='❌ أدخل رابط الفيديو';  err.style.display='block'; return; }
+  var discount = discountVal ? Number(discountVal) : null;
+  if(discount && (discount<=0||discount>=Number(price)))
+    { err.textContent='❌ سعر التخفيض يجب أن يكون أقل من السعر الأصلي'; err.style.display='block'; return; }
 
   err.style.display='none';
   var rid = 'r'+Date.now();
+  var data = { name:name, desc:desc, price:Number(price), url:url, ts:Date.now() };
+  if(discount) data.discount = discount;
   try{
-    await setDoc(doc(db,'reels',rid),{
-      name:name, desc:desc, price:Number(price), url:url, ts:Date.now()
-    });
+    await setDoc(doc(db,'reels',rid), data);
     document.getElementById('rl-name').value='';
     document.getElementById('rl-desc').value='';
     document.getElementById('rl-price').value='';
+    document.getElementById('rl-discount').value='';
     document.getElementById('rl-url').value='';
     showToast('✅ تم نشر الريل');
     renderAdminReels();
   }catch(e){ err.textContent='❌ خطأ: '+e.message; err.style.display='block'; }
 };
 
-function renderAdminReels(){
+function renderAdminReels(query){
   var el = document.getElementById('reels-admin-list');
   if(!el) return;
   if(!reels.length){
@@ -2324,7 +2409,13 @@ function renderAdminReels(){
     return;
   }
   el.innerHTML='';
-  reels.forEach(function(r){
+  var list = reels;
+  if(query){
+    var q2=query.toLowerCase();
+    list=reels.filter(function(r){ return (r.name||'').toLowerCase().includes(q2)||(r.desc||'').toLowerCase().includes(q2); });
+  }
+  if(!list.length){ el.innerHTML='<div class="no-data" style="padding:20px">لا توجد نتائج</div>'; return; }
+  list.forEach(function(r){
     var card = document.createElement('div');
     card.className = 'reel-admin-card';
 
@@ -2444,6 +2535,69 @@ window.aTab = function(name, el){
     updateNewOrdersBadge(0);
   }
 };
+
+
+window.toggleAddForm = function(){
+  var form = document.getElementById('add-prod-form');
+  var btn  = document.getElementById('toggle-add-btn');
+  var isHidden = form.style.display === 'none';
+  form.style.display = isHidden ? 'block' : 'none';
+  btn.innerHTML = isHidden ? '✖️ إغلاق نموذج الإضافة' : '➕ إضافة منتج جديد';
+  if(isHidden){
+    // reset form
+    document.getElementById('p-name').value='';
+    document.getElementById('p-desc').value='';
+    document.getElementById('p-price').value='';
+    document.getElementById('p-err').style.display='none';
+    var pimg=document.getElementById('pimg');
+    if(pimg){ pimg.src=''; pimg.style.display='none'; }
+    var iup=document.getElementById('iup');
+    if(iup) iup.classList.remove('has-img');
+  }
+};
+
+window.filterAdminProds = function(){
+  var q = document.getElementById('admin-prod-search').value;
+  renderProds(q);
+};
+
+
+window.filterAdminReels = function(){
+  var q = document.getElementById('admin-reel-search').value.trim().toLowerCase();
+  var el = document.getElementById('reels-admin-list');
+  if(!el) return;
+  // re-render with filter
+  renderAdminReels(q);
+};
+
+
+window.filterStoreReels = function(query){
+  var q = (query||'').trim().toLowerCase();
+  var filtered = q ? reels.filter(function(r){
+    return (r.name||'').toLowerCase().includes(q) || (r.desc||'').toLowerCase().includes(q);
+  }) : reels;
+  renderReelsList(filtered);
+};
+
+
+// ══════════════════════════
+//  DISCOUNT PRICE HELPER
+// ══════════════════════════
+function priceHTML(price, discount){
+  if(discount && discount < price){
+    return '<span style="text-decoration:line-through;color:var(--muted);font-size:12px;margin-left:4px;">'+Number(price).toLocaleString()+' د.ع</span> '+
+           '<span style="color:#E05252;font-weight:900;">'+Number(discount).toLocaleString()+' د.ع</span>';
+  }
+  return '<span>'+Number(price).toLocaleString()+' د.ع</span>';
+}
+
+function discountBadgeHTML(price, discount){
+  if(!discount || discount>=price) return '';
+  var pct = Math.round((1 - discount/price)*100);
+  return '<div style="position:absolute;top:8px;right:8px;background:#E05252;color:#fff;'+
+    'font-family:Tajawal,sans-serif;font-size:11px;font-weight:900;padding:3px 8px;'+
+    'border-radius:20px;z-index:2;transform:rotate(-2deg);">خصم '+pct+'%</div>';
+}
 
 // ── BOOT ──
 async function boot(){
