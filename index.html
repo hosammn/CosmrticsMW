@@ -1180,8 +1180,9 @@ window.filterProds = function(q){
 
 window.addToCart = function(id){
   var p=products.find(function(x){ return x.id===id; }); if(!p) return;
+  var finalPrice = (p.discount && p.discount < p.price) ? p.discount : p.price;
   var ex=cart.find(function(c){ return c.id===id; });
-  if(ex){ ex.qty++; } else { cart.push({id:p.id,name:p.name,price:p.price,img:p.img||null,qty:1}); }
+  if(ex){ ex.qty++; } else { cart.push({id:p.id,name:p.name,price:finalPrice,img:p.img||null,qty:1}); }
   updateBadge();
   showToast('✅ أُضيف "'+p.name+'" إلى السلة');
 };
@@ -1488,8 +1489,8 @@ function renderProds(query){
         (p.desc?'<div style="font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+esc(p.desc)+'</div>':'')+
       '</div>'+
       '<div style="display:flex;gap:6px;padding:0 8px 8px;">'+
-        '<button onclick="openProdDetail(\"'+p.id+'\",\"admin\")" style="flex:1;padding:6px;background:var(--bg3);border:1px solid var(--bor);color:var(--txt);border-radius:8px;font-family:Tajawal,sans-serif;font-size:12px;cursor:pointer;">✏️ تعديل</button>'+
-        '<button onclick="delProd(\"'+p.id+'\")" style="padding:6px 10px;background:rgba(224,82,82,.1);border:1px solid rgba(224,82,82,.25);color:#E05252;border-radius:8px;font-family:Tajawal,sans-serif;font-size:12px;cursor:pointer;">🗑️</button>'+
+        '<button data-pid="'+p.id+'" data-action="edit" style="flex:1;padding:6px;background:var(--bg3);border:1px solid var(--bor);color:var(--txt);border-radius:8px;font-family:Tajawal,sans-serif;font-size:12px;cursor:pointer;">✏️ تعديل</button>'+
+        '<button data-pid="'+p.id+'" data-action="del" style="padding:6px 10px;background:rgba(224,82,82,.1);border:1px solid rgba(224,82,82,.25);color:#E05252;border-radius:8px;font-family:Tajawal,sans-serif;font-size:12px;cursor:pointer;">🗑️</button>'+
       '</div>'+
     '</div>';
   });
@@ -2599,6 +2600,19 @@ function discountBadgeHTML(price, discount){
     'font-family:Tajawal,sans-serif;font-size:11px;font-weight:900;padding:3px 8px;'+
     'border-radius:20px;z-index:2;transform:rotate(-2deg);">خصم '+pct+'%</div>';
 }
+
+
+// Event delegation for admin products grid buttons
+document.addEventListener('click', function(e){
+  var btn = e.target.closest('button[data-action]');
+  if(!btn) return;
+  var pid    = btn.getAttribute('data-pid');
+  var action = btn.getAttribute('data-action');
+  if(!pid) return;
+  e.stopPropagation();
+  if(action === 'edit') { window.openProdDetail(pid, 'admin'); }
+  if(action === 'del')  { window.delProd(pid); }
+});
 
 // ── BOOT ──
 async function boot(){
