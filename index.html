@@ -3342,10 +3342,8 @@ async function boot(){
   var closed = localStorage.getItem('ios-banner-closed');
   
   if(isIOS && isSafari && !isStandalone && !closed){
-    setTimeout(function(){
-      var banner = document.getElementById('ios-install-banner');
-      if(banner) banner.style.display = 'flex';
-    }, 3000); // Show after 3 seconds
+    var banner = document.getElementById('ios-install-banner');
+    if(banner) banner.style.display = 'flex';
   }
 })();
 
