@@ -456,6 +456,9 @@ input:checked+.tog-sl:before{background:#fff;right:auto;left:2px;}
     <button class="btn-o" onclick="goLogin('customer')">تسجيل الدخول</button>
   </div>
   <p class="adm-link" onclick="goLogin('admin')">🔐 دخول الإدارة</p>
+  <button id="pwa-install-btn" onclick="window.showIOSInstall()" style="display:none;margin:20px auto 0;background:none;border:none;color:rgba(255,255,255,0.35);font-family:Tajawal,sans-serif;font-size:13px;cursor:pointer;padding:8px 16px;border-bottom:1px dashed rgba(255,255,255,0.2);letter-spacing:0.3px;">
+    ⬇️ إضافة Cosmetics MW كتطبيق
+  </button>
 </div>
 
 <!-- REGISTER -->
@@ -3334,17 +3337,47 @@ async function boot(){
 }
 
 
-// iOS Install Banner
+// PWA Install System
 (function(){
   var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
   var isSafari = /safari/i.test(navigator.userAgent) && !/chrome|crios|fxios/i.test(navigator.userAgent);
-  var isStandalone = window.navigator.standalone === true;
-  var closed = localStorage.getItem('ios-banner-closed');
-  
-  if(isIOS && isSafari && !isStandalone && !closed){
-    var banner = document.getElementById('ios-install-banner');
-    if(banner) banner.style.display = 'flex';
+  var isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+  var deferredPrompt = null;
+
+  // Android/Chrome: catch install prompt
+  window.addEventListener('beforeinstallprompt', function(e){
+    e.preventDefault();
+    deferredPrompt = e;
+    showInstallBtn();
+  });
+
+  // Show the small button on splash
+  function showInstallBtn(){
+    var btn = document.getElementById('pwa-install-btn');
+    if(btn) btn.style.display = 'block';
   }
+
+  // iOS Safari: show button
+  if(isIOS && isSafari && !isStandalone){
+    showInstallBtn();
+  }
+
+  // When user clicks the button
+  window.showIOSInstall = function(){
+    if(deferredPrompt){
+      // Android: show native prompt
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.then(function(){
+        deferredPrompt = null;
+        var btn = document.getElementById('pwa-install-btn');
+        if(btn) btn.style.display = 'none';
+      });
+    } else {
+      // iOS: show instruction banner
+      var banner = document.getElementById('ios-install-banner');
+      if(banner) banner.style.display = 'flex';
+    }
+  };
 })();
 
 boot();
