@@ -1266,7 +1266,17 @@ window.doLogin = async function(){
 
 // ── Store ──
 function renderStore(list){
-  var prods = list!==undefined ? list : products.slice().reverse();
+  var prods = list!==undefined ? list : products.slice().sort(function(a,b){
+    // pinned always first
+    if(a.pinned && !b.pinned) return -1;
+    if(!a.pinned && b.pinned) return 1;
+    // then by order field (lower = higher priority), fallback to reverse insertion
+    var ao = (a.order !== undefined) ? a.order : 999999;
+    var bo = (b.order !== undefined) ? b.order : 999999;
+    if(ao !== bo) return ao - bo;
+    // fallback: newer first (reverse)
+    return (b._idx||0) - (a._idx||0);
+  });
   var g = document.getElementById('pgrid');
   if(!prods.length){ g.innerHTML='<div class="no-data">📦<br>لا توجد منتجات متاحة</div>'; return; }
   g.innerHTML='';
@@ -1779,6 +1789,10 @@ function renderProds(query){
       '<div style="display:flex;gap:6px;padding:0 8px 8px;">'+
         '<button data-pid="'+p.id+'" data-action="edit" style="flex:1;padding:6px;background:var(--bg3);border:1px solid var(--bor);color:var(--txt);border-radius:8px;font-family:Tajawal,sans-serif;font-size:12px;cursor:pointer;">✏️ تعديل</button>'+
         '<button data-pid="'+p.id+'" data-action="del" style="padding:6px 10px;background:rgba(224,82,82,.1);border:1px solid rgba(224,82,82,.25);color:#E05252;border-radius:8px;font-family:Tajawal,sans-serif;font-size:12px;cursor:pointer;">🗑️</button>'+
+      '</div>'+
+      '<div style="display:flex;gap:6px;padding:0 8px 8px;">'+
+        '<button data-pid="'+p.id+'" data-action="boost" style="flex:1;padding:6px;background:rgba(255,200,0,.1);border:1px solid rgba(255,200,0,.3);color:#f0c040;border-radius:8px;font-family:Tajawal,sans-serif;font-size:11px;cursor:pointer;">⬆️ ارفعه</button>'+
+        '<button data-pid="'+p.id+'" data-action="pin" style="flex:1;padding:6px;background:'+(p.pinned?'rgba(255,150,0,.25)':'rgba(255,150,0,.08)')+';border:1px solid rgba(255,150,0,.3);color:#f08030;border-radius:8px;font-family:Tajawal,sans-serif;font-size:11px;cursor:pointer;">'+(p.pinned?'📌 مثبت':'📌 تثبيت')+'</button>'+
       '</div>'+
     '</div>';
   });
@@ -2942,9 +2956,36 @@ document.addEventListener('click', function(e){
   var action = btn.getAttribute('data-action');
   if(!pid) return;
   e.stopPropagation();
-  if(action === 'edit') { window.openProdDetail(pid, 'admin'); }
-  if(action === 'del')  { window.delProd(pid); }
+  if(action === 'edit')  { window.openProdDetail(pid, 'admin'); }
+  if(action === 'del')   { window.delProd(pid); }
+  if(action === 'boost') { window.boostProd(pid); }
+  if(action === 'pin')   { window.pinProd(pid); }
 });
+
+window.boostProd = async function(pid){
+  var minOrder = 0;
+  products.forEach(function(p){ if(p.order !== undefined && p.order < minOrder) minOrder = p.order; });
+  var newOrder = minOrder - 1;
+  try{
+    await updateDoc(doc(db,'products',pid),{ order: newOrder });
+    var p = products.find(function(x){ return x.id===pid; });
+    if(p) p.order = newOrder;
+    renderProds(); renderStore();
+    showToast('⬆️ تم رفع المنتج لأول الصفحة');
+  }catch(e){ showToast('❌ خطأ: '+e.message); }
+};
+
+window.pinProd = async function(pid){
+  var p = products.find(function(x){ return x.id===pid; });
+  if(!p) return;
+  var newPinned = !p.pinned;
+  try{
+    await updateDoc(doc(db,'products',pid),{ pinned: newPinned });
+    p.pinned = newPinned;
+    renderProds(); renderStore();
+    showToast(newPinned ? '📌 تم تثبيت المنتج في الأول' : '📌 تم إلغاء التثبيت');
+  }catch(e){ showToast('❌ خطأ: '+e.message); }
+};
 
 
 function syncCartPrices(){
@@ -3274,7 +3315,7 @@ async function boot(){
     });
     onSnapshot(collection(db,'products'), function(snap){
       products=[];
-      snap.forEach(function(d){ var p=d.data(); p.id=d.id; products.push(p); });
+      var _pi=0; snap.forEach(function(d){ var p=d.data(); p.id=d.id; p._idx=_pi++; products.push(p); });
       // Sync cart prices every time products load (important on mobile)
       syncCartPrices();
       var s=document.getElementById('store');
