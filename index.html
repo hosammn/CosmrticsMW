@@ -1307,30 +1307,25 @@ function renderCart(){
   });
   var subtotal=0; cart.forEach(function(c){ subtotal+=c.price*c.qty; });
 
-  // Check free delivery asynchronously
-  var deliveryRow = document.getElementById('delivery-row');
-  var deliveryFeeEl = document.getElementById('delivery-fee');
-  var deliveryLabelEl = deliveryRow ? deliveryRow.querySelector('span') : null;
+  var deliveryRow    = document.getElementById('delivery-row');
+  var deliveryFeeEl  = document.getElementById('delivery-fee');
+  var deliveryLabelEl= deliveryRow ? deliveryRow.querySelector('span') : null;
 
-  checkFreeDelivery(me ? me.phone : '').then(function(isFree){
-    var delivery = isFree ? 0 : getDeliveryFee();
-    var grand = subtotal + delivery;
-    document.getElementById('ctotal').textContent = subtotal.toLocaleString()+' د.ع';
-    if(isFree && delivery===0){
-      if(deliveryLabelEl) deliveryLabelEl.innerHTML = '🚚 خدمة التوصيل <span style="background:#25a244;color:#fff;font-size:10px;padding:2px 7px;border-radius:20px;margin-right:4px;">مجاني 🎉</span>';
-      if(deliveryFeeEl){ deliveryFeeEl.textContent='0 د.ع'; deliveryFeeEl.style.color='#25a244'; deliveryFeeEl.style.textDecoration='line-through'; }
-    } else {
-      if(deliveryLabelEl) deliveryLabelEl.innerHTML = '🚚 خدمة التوصيل';
-      if(deliveryFeeEl){ deliveryFeeEl.textContent=delivery.toLocaleString()+' د.ع'; deliveryFeeEl.style.color='var(--gold)'; deliveryFeeEl.style.textDecoration='none'; }
-    }
-    document.getElementById('cgrand').textContent = grand.toLocaleString()+' د.ع';
-  });
+  var isFree   = checkFreeDelivery(me ? me.phone : '');
+  var delivery = isFree ? 0 : getDeliveryFee();
+  var grand    = subtotal + delivery;
 
-  // Show initial values while loading
-  var initDelivery = getDeliveryFee();
   document.getElementById('ctotal').textContent = subtotal.toLocaleString()+' د.ع';
-  document.getElementById('delivery-fee').textContent = initDelivery.toLocaleString()+' د.ع';
-  document.getElementById('cgrand').textContent = (subtotal+initDelivery).toLocaleString()+' د.ع';
+
+  if(isFree){
+    if(deliveryLabelEl) deliveryLabelEl.innerHTML = '🚚 خدمة التوصيل <span style="background:#25a244;color:#fff;font-size:10px;padding:2px 7px;border-radius:20px;margin-right:4px;">مجاني 🎉</span>';
+    if(deliveryFeeEl){ deliveryFeeEl.textContent='0 د.ع'; deliveryFeeEl.style.color='#25a244'; deliveryFeeEl.style.textDecoration=''; }
+  } else {
+    if(deliveryLabelEl) deliveryLabelEl.innerHTML = '🚚 خدمة التوصيل';
+    if(deliveryFeeEl){ deliveryFeeEl.textContent=delivery.toLocaleString()+' د.ع'; deliveryFeeEl.style.color='var(--gold)'; deliveryFeeEl.style.textDecoration='none'; }
+  }
+
+  document.getElementById('cgrand').textContent = grand.toLocaleString()+' د.ع';
   ft.style.display='block';
 }
 window.chQty=function(id,d){ var c=cart.find(function(x){ return x.id===id; }); if(!c) return; c.qty+=d; if(c.qty<=0) remCart(id); else{ updateBadge(); renderCart(); } };
@@ -1359,7 +1354,7 @@ window.openCheckout=function(){
 window.confirmOrder=async function(){
   var subtotal=0; cart.forEach(function(c){ subtotal+=c.price*c.qty; });
   // Check free delivery offer
-  var isFreeDelivery = await checkFreeDelivery(me.phone);
+  var isFreeDelivery = checkFreeDelivery(me.phone);
   var delivery = isFreeDelivery ? 0 : getDeliveryFee();
   var grand=subtotal+delivery;
   var items=cart.map(function(c){ return {name:c.name,qty:c.qty,price:c.price}; });
@@ -2839,19 +2834,16 @@ async function saveFreeDeliveryToFirebase(){
 }
 
 // Check if customer gets free delivery on this order
-async function checkFreeDelivery(userId){
-  if(!freeDeliveryEnabled || !userId) return false;
+// Uses local orders array (no Firestore index needed)
+function checkFreeDelivery(userPhone){
+  if(!freeDeliveryEnabled || !userPhone) return false;
   try{
-    var snap = await getDocs(query(
-      collection(db,'orders'),
-      where('phone','==',userId)
-    ));
-    var count = snap.size;
+    // Use local orders array - already loaded from onSnapshot
+    var myOrders = orders.filter(function(o){ return o.phone === userPhone; });
+    var count = myOrders.length;
     if(freeDeliveryRepeat === 'always'){
-      // Repeats: every (after+1)th order is free
       return count > 0 && (count % (freeDeliveryAfter + 1)) === freeDeliveryAfter;
     } else {
-      // Once only: only the (after+1)th order is free
       return count === freeDeliveryAfter;
     }
   }catch(e){ return false; }
