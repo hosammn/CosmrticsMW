@@ -1213,6 +1213,15 @@ function renderCart(){
   var el=document.getElementById('clist'), ft=document.getElementById('cfoot');
   if(!cart.length){ el.innerHTML='<div class="no-data">🛒<br>سلتك فارغة</div>'; ft.style.display='none'; return; }
   el.innerHTML='';
+  // Sync cart prices with current product prices (discount aware)
+  cart.forEach(function(c){
+    var prod = products.find(function(x){ return x.id===c.id; });
+    if(prod){
+      c.price = (prod.discount && prod.discount < prod.price) ? prod.discount : prod.price;
+      c.img   = prod.img || c.img;
+    }
+  });
+
   cart.forEach(function(c){
     var ci=document.createElement('div'); ci.className='ci';
     var imgD=document.createElement('div'); imgD.className='ci-img';
