@@ -530,6 +530,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);}
     <button class="atab"   onclick="aTab('custs',this)">👥 العملاء</button>
     <button class="atab"   onclick="aTab('notifs',this)">🔔 الإشعارات</button>
         <button class="atab"   onclick="aTab('reels',this)">🎬 الريلز</button>
+    <button class="atab"   onclick="aTab('settings',this)">⚙️ الإعدادات</button>
   </div>
   <div class="body">
 
@@ -633,6 +634,74 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);}
     </div>
   </div>
   <div id="reels-admin-list"></div>
+    </div>
+
+    <div id="tab-settings" class="apanel">
+      <div style="padding:16px;">
+        <h3 style="margin:0 0 20px;font-size:18px;">⚙️ إعدادات المتجر</h3>
+
+        <!-- Free Delivery Offer -->
+        <div style="background:var(--bg2);border:1.5px solid var(--bor);border-radius:16px;padding:16px;margin-bottom:16px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+            <div>
+              <div style="font-size:16px;font-weight:700;">🚚 عرض التوصيل المجاني</div>
+              <div style="font-size:12px;color:var(--muted);margin-top:4px;">بعد عدد معين من الطلبات، التوصيل مجاناً</div>
+            </div>
+            <label style="position:relative;display:inline-block;width:52px;height:28px;cursor:pointer;">
+              <input type="checkbox" id="free-delivery-toggle" onchange="toggleFreeDelivery(this.checked)"
+                style="opacity:0;width:0;height:0;">
+              <span id="free-delivery-slider" style="position:absolute;inset:0;background:var(--bg3);border-radius:28px;transition:.3s;border:1.5px solid var(--bor);">
+                <span id="free-delivery-knob" style="position:absolute;top:2px;right:2px;width:20px;height:20px;background:#888;border-radius:50%;transition:.3s;"></span>
+              </span>
+            </label>
+          </div>
+
+          <div id="free-delivery-settings" style="display:none;border-top:1px solid var(--bor);padding-top:12px;">
+            <div class="f" style="margin-bottom:10px;">
+              <label>عدد الطلبات قبل التوصيل المجاني</label>
+              <div style="display:flex;align-items:center;gap:10px;margin-top:6px;">
+                <button onclick="changeDeliveryCount(-1)"
+                  style="width:36px;height:36px;background:var(--bg3);border:1.5px solid var(--bor);color:var(--txt);border-radius:10px;font-size:20px;cursor:pointer;font-family:Tajawal,sans-serif;">−</button>
+                <span id="delivery-count-display"
+                  style="font-size:22px;font-weight:900;color:var(--gold);min-width:40px;text-align:center;">2</span>
+                <button onclick="changeDeliveryCount(1)"
+                  style="width:36px;height:36px;background:var(--bg3);border:1.5px solid var(--bor);color:var(--txt);border-radius:10px;font-size:20px;cursor:pointer;font-family:Tajawal,sans-serif;">+</button>
+              </div>
+              <div style="font-size:12px;color:var(--muted);margin-top:6px;">
+                الطلب رقم <span id="free-order-num" style="color:var(--gold);font-weight:700;">3</span> سيكون توصيله مجاناً
+              </div>
+            </div>
+            <!-- Repeat option -->
+            <div style="margin-bottom:14px;">
+              <label style="font-size:14px;font-weight:700;display:block;margin-bottom:8px;">🔁 تكرار العرض</label>
+              <div style="display:flex;gap:8px;">
+                <button id="repeat-btn-once" onclick="setRepeatMode('once')"
+                  style="flex:1;padding:10px;border-radius:10px;border:2px solid var(--gold);background:var(--gold);color:#fff;font-family:Tajawal,sans-serif;font-size:13px;font-weight:700;cursor:pointer;">
+                  1️⃣ مرة واحدة فقط
+                </button>
+                <button id="repeat-btn-always" onclick="setRepeatMode('always')"
+                  style="flex:1;padding:10px;border-radius:10px;border:2px solid var(--bor);background:var(--bg3);color:var(--txt);font-family:Tajawal,sans-serif;font-size:13px;font-weight:700;cursor:pointer;">
+                  🔁 يتكرر دائماً
+                </button>
+              </div>
+              <div id="repeat-hint" style="font-size:11px;color:var(--muted);margin-top:6px;text-align:center;">
+                كل عميل يحصل على التوصيل المجاني مرة واحدة فقط
+              </div>
+            </div>
+
+            <button onclick="saveFreeDeliverySettings()"
+              style="width:100%;padding:11px;background:linear-gradient(135deg,var(--gold),#b8860b);color:#fff;border:none;border-radius:12px;font-family:Tajawal,sans-serif;font-size:15px;font-weight:700;cursor:pointer;">
+              💾 حفظ الإعدادات
+            </button>
+          </div>
+
+          <div id="free-delivery-status" style="margin-top:10px;font-size:13px;color:var(--muted);text-align:center;display:none;">
+            ✅ العرض مفعّل — كل <span id="fd-count-label" style="color:var(--gold);font-weight:700;">2</span> طلبات والثالث توصيله مجاني
+            <span id="fd-repeat-label" style="display:block;margin-top:3px;font-size:11px;"></span>
+          </div>
+        </div>
+
+      </div>
     </div>
 
   </div>
@@ -914,8 +983,8 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);}
 <script type="module">
 import { initializeApp }      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, collection, doc,
-         getDocs, setDoc, updateDoc,
-         deleteDoc, onSnapshot }   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+         getDocs, getDoc, setDoc, updateDoc,
+         deleteDoc, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // ── Config ──
 const app = initializeApp({
@@ -1025,6 +1094,7 @@ function enterApp(user){
       me.selectedLand = user.land;
     }
     loadCart();
+    loadFreeDeliverySettings();
     go('store');
   }
 }
@@ -1236,11 +1306,31 @@ function renderCart(){
     el.appendChild(ci);
   });
   var subtotal=0; cart.forEach(function(c){ subtotal+=c.price*c.qty; });
-  var delivery=getDeliveryFee();
-  var grand=subtotal+delivery;
-  document.getElementById('ctotal').textContent=subtotal.toLocaleString()+' د.ع';
-  document.getElementById('delivery-fee').textContent=delivery.toLocaleString()+' د.ع';
-  document.getElementById('cgrand').textContent=grand.toLocaleString()+' د.ع';
+
+  // Check free delivery asynchronously
+  var deliveryRow = document.getElementById('delivery-row');
+  var deliveryFeeEl = document.getElementById('delivery-fee');
+  var deliveryLabelEl = deliveryRow ? deliveryRow.querySelector('span') : null;
+
+  checkFreeDelivery(me ? me.phone : '').then(function(isFree){
+    var delivery = isFree ? 0 : getDeliveryFee();
+    var grand = subtotal + delivery;
+    document.getElementById('ctotal').textContent = subtotal.toLocaleString()+' د.ع';
+    if(isFree && delivery===0){
+      if(deliveryLabelEl) deliveryLabelEl.innerHTML = '🚚 خدمة التوصيل <span style="background:#25a244;color:#fff;font-size:10px;padding:2px 7px;border-radius:20px;margin-right:4px;">مجاني 🎉</span>';
+      if(deliveryFeeEl){ deliveryFeeEl.textContent='0 د.ع'; deliveryFeeEl.style.color='#25a244'; deliveryFeeEl.style.textDecoration='line-through'; }
+    } else {
+      if(deliveryLabelEl) deliveryLabelEl.innerHTML = '🚚 خدمة التوصيل';
+      if(deliveryFeeEl){ deliveryFeeEl.textContent=delivery.toLocaleString()+' د.ع'; deliveryFeeEl.style.color='var(--gold)'; deliveryFeeEl.style.textDecoration='none'; }
+    }
+    document.getElementById('cgrand').textContent = grand.toLocaleString()+' د.ع';
+  });
+
+  // Show initial values while loading
+  var initDelivery = getDeliveryFee();
+  document.getElementById('ctotal').textContent = subtotal.toLocaleString()+' د.ع';
+  document.getElementById('delivery-fee').textContent = initDelivery.toLocaleString()+' د.ع';
+  document.getElementById('cgrand').textContent = (subtotal+initDelivery).toLocaleString()+' د.ع';
   ft.style.display='block';
 }
 window.chQty=function(id,d){ var c=cart.find(function(x){ return x.id===id; }); if(!c) return; c.qty+=d; if(c.qty<=0) remCart(id); else{ updateBadge(); renderCart(); } };
@@ -1268,7 +1358,9 @@ window.openCheckout=function(){
 
 window.confirmOrder=async function(){
   var subtotal=0; cart.forEach(function(c){ subtotal+=c.price*c.qty; });
-  var delivery=getDeliveryFee();
+  // Check free delivery offer
+  var isFreeDelivery = await checkFreeDelivery(me.phone);
+  var delivery = isFreeDelivery ? 0 : getDeliveryFee();
   var grand=subtotal+delivery;
   var items=cart.map(function(c){ return {name:c.name,qty:c.qty,price:c.price}; });
   var oid='o'+Date.now();
@@ -1278,6 +1370,7 @@ window.confirmOrder=async function(){
   var order={id:oid,status:'pending',customer:me.name,phone:me.phone,
     address:gov+' — '+area+(land?' ('+land+')':''),
     items:items,subtotal:subtotal,delivery:delivery,total:grand,
+    freeDelivery:isFreeDelivery,
     date:new Date().toLocaleDateString('ar-IQ')};
   await setDoc(doc(db,'orders',oid),order);
   // Don't push manually — onSnapshot handles it
@@ -1303,7 +1396,8 @@ window.aTab=function(name,el){
     document.getElementById('add-prod-form').style.display='none';
     document.getElementById('toggle-add-btn').innerHTML='➕ إضافة منتج جديد';
   }
-  if(name==='reels')  renderAdminReels();
+  if(name==='reels')    renderAdminReels();
+  if(name==='settings'){ loadFreeDeliverySettings(); }
 };
 
 function renderAdmin(){
@@ -2632,6 +2726,135 @@ function syncCartPrices(){
       c.img   = prod.img || c.img;
     }
   });
+}
+
+
+// ══════════════════════════════════════
+//  FREE DELIVERY OFFER SYSTEM
+// ══════════════════════════════════════
+var freeDeliveryEnabled = false;
+var freeDeliveryAfter   = 2; // default: after 2 orders, 3rd is free
+var freeDeliveryRepeat  = 'once'; // 'once' or 'always'
+
+// Load settings from Firebase
+async function loadFreeDeliverySettings(){
+  try{
+    var snap = await getDoc(doc(db,'settings','free_delivery'));
+    if(snap.exists()){
+      var data = snap.data();
+      freeDeliveryEnabled = data.enabled || false;
+      freeDeliveryAfter   = data.after   || 2;
+      freeDeliveryRepeat  = data.repeat  || 'once';
+    }
+    updateFreeDeliveryUI();
+  }catch(e){ console.log('settings load error',e); }
+}
+
+function updateFreeDeliveryUI(){
+  var toggle  = document.getElementById('free-delivery-toggle');
+  var slider  = document.getElementById('free-delivery-slider');
+  var knob    = document.getElementById('free-delivery-knob');
+  var settings= document.getElementById('free-delivery-settings');
+  var status  = document.getElementById('free-delivery-status');
+  var countEl = document.getElementById('delivery-count-display');
+  var freeNum = document.getElementById('free-order-num');
+  var fdLabel = document.getElementById('fd-count-label');
+
+  if(!toggle) return;
+
+  toggle.checked = freeDeliveryEnabled;
+  if(freeDeliveryEnabled){
+    slider.style.background = 'var(--gold)';
+    knob.style.background   = '#fff';
+    knob.style.right        = 'auto';
+    knob.style.left         = '2px';
+    status.style.display    = 'block';
+    settings.style.display  = 'block';
+  } else {
+    slider.style.background = 'var(--bg3)';
+    knob.style.background   = '#888';
+    knob.style.left         = 'auto';
+    knob.style.right        = '2px';
+    status.style.display    = 'none';
+    settings.style.display  = 'none';
+  }
+  if(countEl) countEl.textContent = freeDeliveryAfter;
+  if(freeNum) freeNum.textContent = freeDeliveryAfter + 1;
+  if(fdLabel) fdLabel.textContent = freeDeliveryAfter;
+
+  // Repeat mode buttons
+  var btnOnce   = document.getElementById('repeat-btn-once');
+  var btnAlways = document.getElementById('repeat-btn-always');
+  var hint      = document.getElementById('repeat-hint');
+  var repLabel  = document.getElementById('fd-repeat-label');
+  if(btnOnce && btnAlways){
+    if(freeDeliveryRepeat === 'always'){
+      btnAlways.style.background = 'var(--gold)'; btnAlways.style.color = '#fff'; btnAlways.style.borderColor = 'var(--gold)';
+      btnOnce.style.background   = 'var(--bg3)';  btnOnce.style.color   = 'var(--txt)'; btnOnce.style.borderColor = 'var(--bor)';
+      if(hint) hint.textContent = 'كل عميل يحصل على التوصيل المجاني مع كل دورة طلبات';
+      if(repLabel) repLabel.textContent = '🔁 يتكرر مع كل دورة';
+    } else {
+      btnOnce.style.background   = 'var(--gold)'; btnOnce.style.color   = '#fff'; btnOnce.style.borderColor = 'var(--gold)';
+      btnAlways.style.background = 'var(--bg3)';  btnAlways.style.color = 'var(--txt)'; btnAlways.style.borderColor = 'var(--bor)';
+      if(hint) hint.textContent = 'كل عميل يحصل على التوصيل المجاني مرة واحدة فقط';
+      if(repLabel) repLabel.textContent = '1️⃣ مرة واحدة لكل عميل';
+    }
+  }
+}
+
+window.toggleFreeDelivery = async function(checked){
+  freeDeliveryEnabled = checked;
+  updateFreeDeliveryUI();
+  await saveFreeDeliveryToFirebase();
+  showToast(checked ? '✅ تم تفعيل عرض التوصيل المجاني' : '⏸️ تم إيقاف عرض التوصيل المجاني');
+};
+
+window.setRepeatMode = function(mode){
+  freeDeliveryRepeat = mode;
+  updateFreeDeliveryUI();
+};
+
+window.changeDeliveryCount = function(delta){
+  freeDeliveryAfter = Math.max(1, freeDeliveryAfter + delta);
+  var countEl = document.getElementById('delivery-count-display');
+  var freeNum = document.getElementById('free-order-num');
+  if(countEl) countEl.textContent = freeDeliveryAfter;
+  if(freeNum) freeNum.textContent = freeDeliveryAfter + 1;
+};
+
+window.saveFreeDeliverySettings = async function(){
+  await saveFreeDeliveryToFirebase();
+  updateFreeDeliveryUI();
+  showToast('💾 تم حفظ الإعدادات');
+};
+
+async function saveFreeDeliveryToFirebase(){
+  try{
+    await setDoc(doc(db,'settings','free_delivery'),{
+      enabled: freeDeliveryEnabled,
+      after:   freeDeliveryAfter,
+      repeat:  freeDeliveryRepeat
+    });
+  }catch(e){ showToast('❌ خطأ في الحفظ'); }
+}
+
+// Check if customer gets free delivery on this order
+async function checkFreeDelivery(userId){
+  if(!freeDeliveryEnabled || !userId) return false;
+  try{
+    var snap = await getDocs(query(
+      collection(db,'orders'),
+      where('phone','==',userId)
+    ));
+    var count = snap.size;
+    if(freeDeliveryRepeat === 'always'){
+      // Repeats: every (after+1)th order is free
+      return count > 0 && (count % (freeDeliveryAfter + 1)) === freeDeliveryAfter;
+    } else {
+      // Once only: only the (after+1)th order is free
+      return count === freeDeliveryAfter;
+    }
+  }catch(e){ return false; }
 }
 
 // ── BOOT ──
