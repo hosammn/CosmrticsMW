@@ -723,6 +723,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);}
     <div class="f"><label>اسم المنتج</label><input id="ep-name" type="text"></div>
     <div class="f"><label>الوصف</label><textarea id="ep-desc" style="width:100%;background:var(--bg3);border:1.5px solid var(--bor);color:var(--txt);padding:11px 13px;border-radius:10px;font-family:Tajawal,sans-serif;font-size:14px;outline:none;resize:vertical;min-height:90px;" placeholder="وصف المنتج"></textarea></div>
     <div class="f"><label>السعر (دينار عراقي)</label><input id="ep-price" type="number" inputmode="numeric"></div>
+    <div class="f"><label>سعر التخفيض (اتركه فارغاً لإزالة الخصم)</label><input id="ep-discount" type="number" inputmode="numeric" placeholder="مثال: 12000"></div>
     <div class="err" id="ep-err"></div>
     <div class="mbtns">
       <button class="mc" onclick="closeModal('edit-prod-ov')">إلغاء</button>
@@ -1812,7 +1813,8 @@ window.openEditProduct = function(pid){
 
   document.getElementById('ep-name').value  = p.name;
   document.getElementById('ep-desc').value  = p.desc;
-  document.getElementById('ep-price').value = p.price;
+  document.getElementById('ep-price').value    = p.price;
+  document.getElementById('ep-discount').value = p.discount || '';
 
   var epImg = document.getElementById('ep-img');
   if(p.img){
@@ -1853,23 +1855,28 @@ window.loadEditImg = function(input){
 };
 
 window.saveEditProduct = async function(){
-  var name  = document.getElementById('ep-name').value.trim();
-  var desc  = document.getElementById('ep-desc').value.trim();
-  var price = parseFloat(document.getElementById('ep-price').value);
-  var err   = document.getElementById('ep-err');
+  var name     = document.getElementById('ep-name').value.trim();
+  var desc     = document.getElementById('ep-desc').value.trim();
+  var price    = parseFloat(document.getElementById('ep-price').value);
+  var discVal  = document.getElementById('ep-discount').value.trim();
+  var discount = discVal ? parseFloat(discVal) : null;
+  var err      = document.getElementById('ep-err');
 
   if(!name)                  { err.textContent='❌ يرجى إدخال اسم المنتج';  err.style.display='block'; return; }
   if(!desc)                  { err.textContent='❌ يرجى إدخال الوصف';        err.style.display='block'; return; }
   if(isNaN(price)||price<=0) { err.textContent='❌ يرجى إدخال سعر صحيح';    err.style.display='block'; return; }
+  if(discount!==null && (isNaN(discount)||discount<=0||discount>=price))
+    { err.textContent='❌ سعر التخفيض يجب أن يكون أقل من السعر الأصلي'; err.style.display='block'; return; }
 
   try{
     var updates = { name:name, desc:desc, price:price, img:editProdImg };
+    if(discount) updates.discount = discount;
+    else updates.discount = null;  // remove discount if empty
     await updateDoc(doc(db,'products',currentProdId), updates);
     var p = products.find(function(x){ return x.id===currentProdId; });
-    if(p){ p.name=name; p.desc=desc; p.price=price; p.img=editProdImg; }
+    if(p){ p.name=name; p.desc=desc; p.price=price; p.img=editProdImg; p.discount=discount||null; }
     closeModal('edit-prod-ov');
     showToast('✅ تم تعديل المنتج بنجاح');
-    // Refresh detail page
     openProdDetail(currentProdId,'admin');
     renderProds();
   }catch(e2){
