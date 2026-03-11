@@ -142,6 +142,17 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);}
 .cdet .lb{font-size:10px;color:var(--muted);font-weight:600;margin-bottom:2px;}
 .cdet .vl{font-size:13px;font-weight:700;}
 .cdet.full{grid-column:1/-1;}
+.tog-slider{
+  position:absolute;inset:0;background:var(--bg2);border-radius:26px;
+  transition:.3s;border:1.5px solid var(--bor);cursor:pointer;
+}
+.tog-slider:before{
+  content:'';position:absolute;top:2px;right:2px;
+  width:18px;height:18px;background:#888;border-radius:50%;transition:.3s;
+}
+input:checked + .tog-slider{ background:var(--gold);border-color:var(--gold); }
+input:checked + .tog-slider:before{ background:#fff;right:auto;left:2px; }
+
 #new-orders-badge{
   display:none;
   background:#E05252;color:#fff;
@@ -552,8 +563,20 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);}
     </div>
 
     <div id="tab-done" class="apanel">
-      <p class="slbl">✅ الطلبات المجهزة والمرسلة</p>
-      <div id="done-panel"></div>
+      <div style="padding:12px 12px 0;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+        <p class="slbl" style="margin:0;">✅ الطلبات المجهزة</p>
+        <div style="display:flex;gap:6px;">
+          <button id="done-select-all-btn" onclick="toggleSelectAllDone()"
+            style="padding:7px 12px;background:var(--bg3);border:1.5px solid var(--bor);color:var(--txt);border-radius:10px;font-family:Tajawal,sans-serif;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">
+            ☑️ تحديد الكل
+          </button>
+          <button id="done-delete-btn" onclick="deleteSelectedDone()"
+            style="display:none;padding:7px 12px;background:rgba(224,82,82,.15);border:1.5px solid rgba(224,82,82,.4);color:#E05252;border-radius:10px;font-family:Tajawal,sans-serif;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">
+            🗑️ حذف (<span id="done-selected-count">0</span>)
+          </button>
+        </div>
+      </div>
+      <div id="done-panel" style="padding:12px;"></div>
     </div>
 
     
@@ -586,6 +609,16 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);}
         <div class="f"><label>الوصف</label><input id="p-desc" type="text" placeholder="وصف مختصر للمنتج"></div>
         <div class="f"><label>السعر (دينار عراقي)</label><input id="p-price" type="number" placeholder="مثال: 15000" inputmode="numeric"></div>
         <div class="f"><label>سعر التخفيض (اتركه فارغاً إن لم يوجد خصم)</label><input id="p-discount" type="number" placeholder="مثال: 12000" inputmode="numeric"></div>
+        <div class="f" style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--bg3);border-radius:12px;border:1.5px solid var(--bor);">
+          <div>
+            <div style="font-size:14px;font-weight:700;">نفذت الكمية</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px;">عند التفعيل يظهر للعميل "نفذت الكمية"</div>
+          </div>
+          <label style="position:relative;display:inline-block;width:48px;height:26px;cursor:pointer;">
+            <input type="checkbox" id="p-outofstock" style="opacity:0;width:0;height:0;">
+            <span class="tog-slider"></span>
+          </label>
+        </div>
         <div class="err" id="p-err"></div>
         <button class="sbtn" onclick="addProduct()">إضافة المنتج ✓</button>
       </div>
@@ -793,6 +826,16 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);}
     <div class="f"><label>الوصف</label><textarea id="ep-desc" style="width:100%;background:var(--bg3);border:1.5px solid var(--bor);color:var(--txt);padding:11px 13px;border-radius:10px;font-family:Tajawal,sans-serif;font-size:14px;outline:none;resize:vertical;min-height:90px;" placeholder="وصف المنتج"></textarea></div>
     <div class="f"><label>السعر (دينار عراقي)</label><input id="ep-price" type="number" inputmode="numeric"></div>
     <div class="f"><label>سعر التخفيض (اتركه فارغاً لإزالة الخصم)</label><input id="ep-discount" type="number" inputmode="numeric" placeholder="مثال: 12000"></div>
+    <div class="f" style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--bg3);border-radius:12px;border:1.5px solid var(--bor);">
+      <div>
+        <div style="font-size:14px;font-weight:700;">نفذت الكمية</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;">يظهر للعميل "نفذت الكمية"</div>
+      </div>
+      <label style="position:relative;display:inline-block;width:48px;height:26px;cursor:pointer;">
+        <input type="checkbox" id="ep-outofstock" style="opacity:0;width:0;height:0;">
+        <span class="tog-slider"></span>
+      </label>
+    </div>
     <div class="err" id="ep-err"></div>
     <div class="mbtns">
       <button class="mc" onclick="closeModal('edit-prod-ov')">إلغاء</button>
@@ -1449,13 +1492,102 @@ function renderOrders(){
   el.innerHTML=h;
 }
 
+var selectedDoneIds = [];
+
 function renderDone(){
+  selectedDoneIds = [];
+  updateDeleteBtn();
+
   var el=document.getElementById('done-panel');
   var done=orders.filter(function(o){ return o.status==='done'; });
   if(!done.length){ el.innerHTML='<div class="no-data">✅<br>لا توجد طلبات مجهزة بعد</div>'; return; }
-  var h=''; done.slice().reverse().forEach(function(o){ h+=buildCard(o,true,false); });
-  el.innerHTML=h;
+
+  el.innerHTML='';
+  done.slice().reverse().forEach(function(o){
+    var wrap = document.createElement('div');
+    wrap.style.cssText = 'position:relative;margin-bottom:12px;';
+
+    // Checkbox
+    var chk = document.createElement('input');
+    chk.type = 'checkbox';
+    chk.setAttribute('data-oid', o.id);
+    chk.style.cssText = 'position:absolute;top:12px;left:12px;width:20px;height:20px;cursor:pointer;z-index:3;accent-color:#E05252;';
+    chk.addEventListener('change', function(){
+      if(this.checked){
+        selectedDoneIds.push(o.id);
+        wrap.style.outline = '2px solid #E05252';
+        wrap.style.borderRadius = '14px';
+      } else {
+        selectedDoneIds = selectedDoneIds.filter(function(id){ return id!==o.id; });
+        wrap.style.outline = 'none';
+      }
+      updateDeleteBtn();
+    });
+
+    var cardHtml = buildCard(o,true,false);
+    var cardDiv = document.createElement('div');
+    cardDiv.innerHTML = cardHtml;
+
+    wrap.appendChild(chk);
+    wrap.appendChild(cardDiv);
+    el.appendChild(wrap);
+  });
 }
+
+function updateDeleteBtn(){
+  var btn = document.getElementById('done-delete-btn');
+  var cnt = document.getElementById('done-selected-count');
+  if(!btn) return;
+  if(selectedDoneIds.length > 0){
+    btn.style.display = 'block';
+    if(cnt) cnt.textContent = selectedDoneIds.length;
+  } else {
+    btn.style.display = 'none';
+  }
+}
+
+window.toggleSelectAllDone = function(){
+  var done = orders.filter(function(o){ return o.status==='done'; });
+  var allSelected = selectedDoneIds.length === done.length;
+  var checkboxes = document.querySelectorAll('#done-panel input[type=checkbox]');
+  var wraps = document.querySelectorAll('#done-panel input[type=checkbox]');
+
+  if(allSelected){
+    // Deselect all
+    selectedDoneIds = [];
+    checkboxes.forEach(function(chk){
+      chk.checked = false;
+      if(chk.parentElement) chk.parentElement.style.outline='none';
+    });
+    document.getElementById('done-select-all-btn').innerHTML = '☑️ تحديد الكل';
+  } else {
+    // Select all
+    selectedDoneIds = done.map(function(o){ return o.id; });
+    checkboxes.forEach(function(chk){
+      chk.checked = true;
+      if(chk.parentElement){ chk.parentElement.style.outline='2px solid #E05252'; chk.parentElement.style.borderRadius='14px'; }
+    });
+    document.getElementById('done-select-all-btn').innerHTML = '✖️ إلغاء التحديد';
+  }
+  updateDeleteBtn();
+};
+
+window.deleteSelectedDone = async function(){
+  if(!selectedDoneIds.length) return;
+  var count = selectedDoneIds.length;
+  if(!confirm('هل تريد حذف '+count+' طلب؟ لا يمكن التراجع!')) return;
+  try{
+    var promises = selectedDoneIds.map(function(id){
+      return deleteDoc(doc(db,'orders',id));
+    });
+    await Promise.all(promises);
+    selectedDoneIds = [];
+    showToast('🗑️ تم حذف '+count+' طلب');
+    document.getElementById('done-select-all-btn').innerHTML = '☑️ تحديد الكل';
+  }catch(e){
+    showToast('❌ خطأ في الحذف: '+e.message);
+  }
+};
 
 window.markDone=async function(oid){
   await updateDoc(doc(db,'orders',oid),{status:'done'});
