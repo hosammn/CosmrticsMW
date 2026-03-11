@@ -3140,6 +3140,17 @@ window.markOOSNotified = async function(docId){
 
 // ── BOOT ──
 async function boot(){
+  // ── Cache version: bump this to force clear old cache ──
+  var CACHE_VER = '2.1';
+  var savedVer = localStorage.getItem('mw-ver');
+  if(savedVer !== CACHE_VER){
+    // Clear all old cache keys
+    ['mw-cache-products','mw-cache-orders','mw-cache-users'].forEach(function(k){
+      localStorage.removeItem(k);
+    });
+    localStorage.setItem('mw-ver', CACHE_VER);
+  }
+
   // ── Load from localStorage cache first (instant open) ──
   try{
     var cp = localStorage.getItem('mw-cache-products');
