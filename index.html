@@ -1213,14 +1213,7 @@ function renderCart(){
   var el=document.getElementById('clist'), ft=document.getElementById('cfoot');
   if(!cart.length){ el.innerHTML='<div class="no-data">🛒<br>سلتك فارغة</div>'; ft.style.display='none'; return; }
   el.innerHTML='';
-  // Sync cart prices with current product prices (discount aware)
-  cart.forEach(function(c){
-    var prod = products.find(function(x){ return x.id===c.id; });
-    if(prod){
-      c.price = (prod.discount && prod.discount < prod.price) ? prod.discount : prod.price;
-      c.img   = prod.img || c.img;
-    }
-  });
+  syncCartPrices();
 
   cart.forEach(function(c){
     var ci=document.createElement('div'); ci.className='ci';
@@ -2623,6 +2616,17 @@ document.addEventListener('click', function(e){
   if(action === 'del')  { window.delProd(pid); }
 });
 
+
+function syncCartPrices(){
+  cart.forEach(function(c){
+    var prod = products.find(function(x){ return x.id===c.id; });
+    if(prod){
+      c.price = (prod.discount && prod.discount < prod.price) ? prod.discount : prod.price;
+      c.img   = prod.img || c.img;
+    }
+  });
+}
+
 // ── BOOT ──
 async function boot(){
   var timedOut=false;
@@ -2663,10 +2667,15 @@ async function boot(){
     onSnapshot(collection(db,'products'), function(snap){
       products=[];
       snap.forEach(function(d){ var p=d.data(); p.id=d.id; products.push(p); });
+      // Sync cart prices every time products load (important on mobile)
+      syncCartPrices();
       var s=document.getElementById('store');
       if(s&&s.classList.contains('active')) renderStore();
       var a=document.getElementById('admin');
       if(a&&a.classList.contains('active')) renderAdmin();
+      // Re-render cart if open
+      var cs=document.getElementById('cart-screen');
+      if(cs&&cs.classList.contains('active')) renderCart();
     });
     onSnapshot(collection(db,'orders'), function(snap){
       var prevCount = orders.length;
