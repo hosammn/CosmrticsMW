@@ -540,6 +540,7 @@ input:checked + .tog-slider:before{ background:#fff;right:auto;left:2px; }
     <button class="atab"   onclick="aTab('prods',this)">📦 المنتجات</button>
     <button class="atab"   onclick="aTab('custs',this)">👥 العملاء</button>
     <button class="atab"   onclick="aTab('notifs',this)">🔔 الإشعارات</button>
+    <button class="atab"   onclick="aTab('oos',this)">📭 نفاذ الكمية<span id="oos-requests-badge" style="display:none;background:#E05252;color:#fff;border-radius:50%;width:18px;height:18px;font-size:11px;font-weight:900;display:none;align-items:center;justify-content:center;margin-right:4px;vertical-align:middle;"></span></button>
         <button class="atab"   onclick="aTab('reels',this)">🎬 الريلز</button>
     <button class="atab"   onclick="aTab('settings',this)">⚙️ الإعدادات</button>
   </div>
@@ -667,6 +668,13 @@ input:checked + .tog-slider:before{ background:#fff;right:auto;left:2px; }
     </div>
   </div>
   <div id="reels-admin-list"></div>
+    </div>
+
+    <div id="tab-oos" class="apanel">
+      <div style="padding:12px 12px 0;display:flex;align-items:center;justify-content:space-between;">
+        <p class="slbl" style="margin:0;">📭 طلبات المنتجات المنفذة</p>
+      </div>
+      <div id="oos-requests-list" style="padding:12px;"></div>
     </div>
 
     <div id="tab-settings" class="apanel">
@@ -807,6 +815,14 @@ input:checked + .tog-slider:before{ background:#fff;right:auto;left:2px; }
       <div class="pd-desc-label">الوصف</div>
       <div class="pd-desc" id="pd-desc"></div>
       <button class="pd-add-btn" id="pd-add-btn">🛒 أضف إلى السلة</button>
+      <div id="pd-oos-banner" style="display:none;background:rgba(224,82,82,.12);border:1.5px solid rgba(224,82,82,.35);border-radius:14px;padding:12px 14px;margin-top:10px;text-align:center;">
+        <div style="font-size:15px;font-weight:900;color:#E05252;margin-bottom:6px;">⛔ نفذت الكمية مؤقتاً</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">أضغط الزر أدناه وسنبلغك فور توفر المنتج</div>
+        <button id="pd-notify-btn" onclick="requestNotifyOOS()"
+          style="width:100%;padding:11px;background:linear-gradient(135deg,#e67e22,#d35400);color:#fff;border:none;border-radius:12px;font-family:Tajawal,sans-serif;font-size:14px;font-weight:700;cursor:pointer;">
+          🔔 أبلغني عند التوفر
+        </button>
+      </div>
       <button class="pd-edit-btn" id="pd-edit-btn" style="display:none;">✏️ تعديل المنتج</button>
     </div>
   </div>
@@ -940,6 +956,16 @@ input:checked + .tog-slider:before{ background:#fff;right:auto;left:2px; }
     <div class="f"><label>وصف قصير</label><textarea id="er-desc" style="width:100%;background:var(--bg3);border:1.5px solid var(--bor);color:var(--txt);padding:11px 13px;border-radius:10px;font-family:Tajawal,sans-serif;font-size:14px;outline:none;resize:vertical;min-height:70px;" placeholder="الوصف"></textarea></div>
     <div class="f"><label>السعر (د.ع)</label><input id="er-price" type="number" inputmode="numeric"></div>
     <div class="f"><label>رابط الفيديو</label><input id="er-url" type="url" placeholder="https://..."></div>
+    <div class="f" style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--bg3);border-radius:12px;border:1.5px solid var(--bor);">
+      <div>
+        <div style="font-size:14px;font-weight:700;">نفذت الكمية</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;">يظهر "نفذت الكمية" على الريل</div>
+      </div>
+      <label style="position:relative;display:inline-block;width:48px;height:26px;cursor:pointer;">
+        <input type="checkbox" id="er-outofstock" style="opacity:0;width:0;height:0;">
+        <span class="tog-slider"></span>
+      </label>
+    </div>
     <div class="err" id="er-err"></div>
     <div class="mbtns">
       <button class="mc" onclick="closeModal('edit-reel-ov')">إلغاء</button>
@@ -1115,7 +1141,7 @@ window.goLogin = function(role){
 // ── Enter app & session ──
 function enterApp(user){
   try{ localStorage.setItem('ss', JSON.stringify({phone:user.phone, role:user.role})); }catch(e){}
-  if(user.role==='admin'){ cart=[]; go('admin'); }
+  if(user.role==='admin'){ cart=[]; loadOOSRequests(); go('admin'); }
   else{
     document.getElementById('greet').textContent='أهلاً، '+user.name+' 🦋';
     // Set WhatsApp link
@@ -1248,13 +1274,14 @@ function renderStore(list){
     var footDiv = document.createElement('div');
     footDiv.className = 'pc-foot';
 
-    // Discount badge - append to card (not imgDiv which has overflow:hidden)
+    // Discount badge
     if(p.discount && p.discount < p.price){
       var badgeEl = document.createElement('div');
       badgeEl.innerHTML = discountBadgeHTML(p.price, p.discount);
       card.style.position = 'relative';
       card.appendChild(badgeEl.firstChild);
     }
+
 
     var priceDiv = document.createElement('div');
     priceDiv.className = 'pc-price';
@@ -1263,13 +1290,25 @@ function renderStore(list){
     var plusBtn = document.createElement('button');
     plusBtn.className = 'plus';
     plusBtn.textContent = '+';
-    plusBtn.addEventListener('click', (function(pid, pname){
-      return function(e){
-        e.stopPropagation();
-        addToCart(pid);
-        showToast('✅ أُضيف "' + pname + '" إلى السلة');
-      };
-    })(p.id, p.name));
+    if(p.outOfStock){
+      // Hide plus btn, show OOS overlay on card
+      plusBtn.style.display = 'none';
+      var oosOv = document.createElement('div');
+      oosOv.style.cssText='position:absolute;bottom:0;left:0;right:0;background:rgba(180,0,0,0.82);color:#fff;font-family:Tajawal,sans-serif;font-size:12px;font-weight:900;text-align:center;padding:6px;border-radius:0 0 14px 14px;z-index:3;';
+      oosOv.textContent='⛔ نفذت الكمية';
+      card.style.position='relative';
+      card.appendChild(oosOv);
+      // Disable card click to add
+      card.style.cursor='default';
+    } else {
+      plusBtn.addEventListener('click', (function(pid, pname){
+        return function(e){
+          e.stopPropagation();
+          addToCart(pid);
+          showToast('✅ أُضيف "' + pname + '" إلى السلة');
+        };
+      })(p.id, p.name));
+    }
 
     footDiv.appendChild(priceDiv);
     footDiv.appendChild(plusBtn);
@@ -1436,6 +1475,7 @@ window.aTab=function(name,el){
   }
   if(name==='reels')    renderAdminReels();
   if(name==='settings'){ loadFreeDeliverySettings(); }
+  if(name==='oos'){ renderOOSRequests(); }
 };
 
 function renderAdmin(){
@@ -1669,13 +1709,15 @@ window.addProduct=async function(){
   if(discount!==null && (isNaN(discount)||discount<=0||discount>=price))
     return showErr('p-err','❌ سعر التخفيض يجب أن يكون أقل من السعر الأصلي');
   var pid='p'+Date.now();
-  var prod={id:pid,name:name,desc:desc,price:price,img:pendingImg||null};
+  var outOfStock = document.getElementById('p-outofstock').checked;
+  var prod={id:pid,name:name,desc:desc,price:price,img:pendingImg||null,outOfStock:outOfStock};
   if(discount) prod.discount=discount;
   await setDoc(doc(db,'products',pid),prod);
   document.getElementById('p-name').value='';
   document.getElementById('p-desc').value='';
   document.getElementById('p-price').value='';
   document.getElementById('p-discount').value='';
+  document.getElementById('p-outofstock').checked=false;
   document.querySelector('#iup input[type=file]').value='';
   var pi=document.getElementById('pimg'); pi.src=''; pi.style.display='none';
   document.querySelector('#iup .di').style.display='';
@@ -1704,6 +1746,7 @@ function renderProds(query){
   list.forEach(function(p){
     h += '<div style="background:var(--bg2);border-radius:14px;overflow:visible;border:1px solid var(--bor);position:relative;">'+
       discountBadgeHTML(p.price,p.discount)+
+      (p.outOfStock ? '<div style="position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);border-radius:14px;z-index:2;display:flex;align-items:center;justify-content:center;pointer-events:none;"><div style=\"background:#E05252;color:#fff;font-size:11px;font-weight:900;padding:4px 10px;border-radius:20px;transform:rotate(-5deg);\">نفذت الكمية</div></div>' : '')+
       '<div style="aspect-ratio:1;overflow:hidden;background:var(--bg3);border-radius:14px 14px 0 0;">'+
         (p.img ? '<img src="'+p.img+'" style="width:100%;height:100%;object-fit:cover;">' : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:40px;">🛍️</div>')+
       '</div>'+
@@ -2014,12 +2057,26 @@ window.openProdDetail = function(pid, from) {
     editBtn.style.display = 'block';
     editBtn.onclick = function(){ openEditProduct(pid); };
   } else {
-    addBtn.style.display  = 'block';
     editBtn.style.display = 'none';
-    addBtn.onclick = function(){
-      addToCart(pid);
-      showToast('✅ أُضيف "'+p.name+'" إلى السلة');
-    };
+    var oosBanner = document.getElementById('pd-oos-banner');
+    var notifyBtn = document.getElementById('pd-notify-btn');
+    if(p.outOfStock){
+      addBtn.style.display    = 'none';
+      oosBanner.style.display = 'block';
+      // Reset notify btn
+      if(notifyBtn){ notifyBtn.disabled=false; notifyBtn.textContent='🔔 أبلغني عند التوفر'; }
+    } else {
+      addBtn.style.display    = 'block';
+      addBtn.disabled         = false;
+      addBtn.textContent      = '🛒 أضف إلى السلة';
+      addBtn.style.opacity    = '1';
+      addBtn.style.cursor     = 'pointer';
+      oosBanner.style.display = 'none';
+      addBtn.onclick = function(){
+        addToCart(pid);
+        showToast('✅ أُضيف "'+p.name+'" إلى السلة');
+      };
+    }
   }
 
   go('prod-detail');
@@ -2034,8 +2091,9 @@ window.openEditProduct = function(pid){
 
   document.getElementById('ep-name').value  = p.name;
   document.getElementById('ep-desc').value  = p.desc;
-  document.getElementById('ep-price').value    = p.price;
-  document.getElementById('ep-discount').value = p.discount || '';
+  document.getElementById('ep-price').value      = p.price;
+  document.getElementById('ep-discount').value   = p.discount || '';
+  document.getElementById('ep-outofstock').checked = p.outOfStock || false;
 
   var epImg = document.getElementById('ep-img');
   if(p.img){
@@ -2090,12 +2148,13 @@ window.saveEditProduct = async function(){
     { err.textContent='❌ سعر التخفيض يجب أن يكون أقل من السعر الأصلي'; err.style.display='block'; return; }
 
   try{
-    var updates = { name:name, desc:desc, price:price, img:editProdImg };
+    var outOfStock = document.getElementById('ep-outofstock').checked;
+    var updates = { name:name, desc:desc, price:price, img:editProdImg, outOfStock:outOfStock };
     if(discount) updates.discount = discount;
     else updates.discount = null;  // remove discount if empty
     await updateDoc(doc(db,'products',currentProdId), updates);
     var p = products.find(function(x){ return x.id===currentProdId; });
-    if(p){ p.name=name; p.desc=desc; p.price=price; p.img=editProdImg; p.discount=discount||null; }
+    if(p){ p.name=name; p.desc=desc; p.price=price; p.img=editProdImg; p.discount=discount||null; p.outOfStock=outOfStock; }
     closeModal('edit-prod-ov');
     showToast('✅ تم تعديل المنتج بنجاح');
     openProdDetail(currentProdId,'admin');
@@ -2536,17 +2595,30 @@ function renderReelsList(list){
 
     var addBtn = document.createElement('button');
     addBtn.className = 'reel-add';
-    addBtn.innerHTML = '🛒 أضف للسلة';
-    (function(reel){
-      addBtn.addEventListener('click', function(e){
-        e.stopPropagation();
-        window.addToCartFromReel(reel);
-        // Visual feedback
-        addBtn.innerHTML = '✅ أُضيف!';
-        addBtn.style.background = '#25a244';
-        setTimeout(function(){ addBtn.innerHTML='🛒 أضف للسلة'; addBtn.style.background=''; },1500);
-      });
-    })(r);
+    if(r.outOfStock){
+      addBtn.innerHTML = '⛔ نفذت الكمية';
+      addBtn.style.background = 'rgba(224,82,82,0.7)';
+      addBtn.style.cursor = 'default';
+      (function(reel){
+        addBtn.addEventListener('click', function(e){
+          e.stopPropagation();
+          // Open product detail to request notification
+          currentProdId = reel.id;
+          showToast('🔔 افتح تفاصيل المنتج لطلب الإبلاغ عند التوفر');
+        });
+      })(r);
+    } else {
+      addBtn.innerHTML = '🛒 أضف للسلة';
+      (function(reel){
+        addBtn.addEventListener('click', function(e){
+          e.stopPropagation();
+          window.addToCartFromReel(reel);
+          addBtn.innerHTML = '✅ أُضيف!';
+          addBtn.style.background = '#25a244';
+          setTimeout(function(){ addBtn.innerHTML='🛒 أضف للسلة'; addBtn.style.background=''; },1500);
+        });
+      })(r);
+    }
 
     bottom.appendChild(price);
     bottom.appendChild(addBtn);
@@ -2715,7 +2787,8 @@ window.saveEditReel = async function(){
   if(!price) { err.textContent='❌ أدخل السعر';   err.style.display='block'; return; }
   if(!url)   { err.textContent='❌ أدخل الرابط';  err.style.display='block'; return; }
   try{
-    await updateDoc(doc(db,'reels',id),{name:name,desc:desc,price:Number(price),url:url});
+    var oosR = document.getElementById('er-outofstock').checked;
+    await updateDoc(doc(db,'reels',id),{name:name,desc:desc,price:Number(price),url:url,outOfStock:oosR});
     closeModal('edit-reel-ov');
     showToast('✅ تم تحديث الريل');
   }catch(e2){ err.textContent='❌ خطأ: '+e2.message; err.style.display='block'; }
@@ -2980,6 +3053,90 @@ function checkFreeDelivery(userPhone){
     }
   }catch(e){ return false; }
 }
+
+
+// ══════════════════════════════════════
+//  OUT OF STOCK NOTIFY SYSTEM
+// ══════════════════════════════════════
+
+window.requestNotifyOOS = async function(){
+  if(!me){ showToast('❌ يجب تسجيل الدخول أولاً'); return; }
+  var btn = document.getElementById('pd-notify-btn');
+  if(btn){ btn.disabled=true; btn.textContent='جاري الإرسال...'; }
+  try{
+    var reqId = 'oos_'+Date.now();
+    await setDoc(doc(db,'oos_requests',reqId),{
+      id: reqId,
+      productId:   currentProdId,
+      productName: products.find(function(x){ return x.id===currentProdId; })?.name || currentProdId,
+      customerName:  me.name,
+      customerPhone: me.phone,
+      date: new Date().toLocaleDateString('ar-IQ'),
+      notified: false
+    });
+    if(btn){ btn.textContent='✅ تم! سنبلغك عند التوفر'; }
+    showToast('✅ سيتم إبلاغك عند توفر المنتج');
+  }catch(e){
+    if(btn){ btn.disabled=false; btn.textContent='🔔 أبلغني عند التوفر'; }
+    showToast('❌ خطأ: '+e.message);
+  }
+};
+
+// Load OOS requests for admin
+var oosRequests = [];
+function loadOOSRequests(){
+  onSnapshot(collection(db,'oos_requests'), function(snap){
+    oosRequests = [];
+    snap.forEach(function(d){ var r=d.data(); r.id=d.id; oosRequests.push(r); });
+    renderOOSRequests();
+    // Update badge on OOS tab
+    var pending = oosRequests.filter(function(r){ return !r.notified; });
+    var badge = document.getElementById('oos-requests-badge');
+    if(badge){
+      if(pending.length>0){ badge.textContent=pending.length; badge.style.display='inline-flex'; }
+      else { badge.style.display='none'; }
+    }
+  });
+}
+
+function renderOOSRequests(){
+  var el = document.getElementById('oos-requests-list');
+  if(!el) return;
+  var pending = oosRequests.filter(function(r){ return !r.notified; });
+  if(!pending.length){
+    el.innerHTML='<div class="no-data" style="padding:30px 0;">✅<br>لا توجد طلبات حالياً</div>';
+    return;
+  }
+  var h='';
+  pending.forEach(function(r){
+    var waLink = 'https://wa.me/964'+r.customerPhone.replace(/^0/,'')+
+      '?text='+encodeURIComponent('مرحباً '+r.customerName+'، المنتج الذي طلبته ('+r.productName+') أصبح متاحاً الآن في متجر MW Cosmetics 🎉');
+    h+='<div style="background:var(--bg2);border:1.5px solid var(--bor);border-radius:14px;padding:14px;margin-bottom:10px;">'+
+      '<div style="font-size:14px;font-weight:700;margin-bottom:4px;">📦 '+r.productName+'</div>'+
+      '<div style="font-size:13px;color:var(--muted);margin-bottom:10px;">'+
+        '👤 '+r.customerName+' &nbsp;|&nbsp; 📞 '+r.customerPhone+
+        '<br><span style="font-size:11px;">'+r.date+'</span>'+
+      '</div>'+
+      '<div style="display:flex;gap:8px;">'+
+        '<a href="'+waLink+'" target="_blank" style="flex:1;display:block;text-align:center;padding:9px;background:#25a244;color:#fff;border-radius:10px;text-decoration:none;font-family:Tajawal,sans-serif;font-size:13px;font-weight:700;">'+
+          '📲 إبلاغ عبر واتساب'+
+        '</a>'+
+        '<button onclick="markOOSNotified(''+r.id+'')" '+
+          'style="flex:0 0 auto;padding:9px 14px;background:var(--bg3);border:1.5px solid var(--bor);color:var(--muted);border-radius:10px;font-family:Tajawal,sans-serif;font-size:12px;cursor:pointer;">'+
+          '✅ تم الإبلاغ'+
+        '</button>'+
+      '</div>'+
+    '</div>';
+  });
+  el.innerHTML=h;
+}
+
+window.markOOSNotified = async function(id){
+  try{
+    await updateDoc(doc(db,'oos_requests',id),{ notified:true });
+    showToast('✅ تم تحديد الطلب كمُبلَّغ');
+  }catch(e){ showToast('❌ خطأ'); }
+};
 
 // ── BOOT ──
 async function boot(){
