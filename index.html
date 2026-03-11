@@ -142,17 +142,10 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--txt);}
 .cdet .lb{font-size:10px;color:var(--muted);font-weight:600;margin-bottom:2px;}
 .cdet .vl{font-size:13px;font-weight:700;}
 .cdet.full{grid-column:1/-1;}
-.tog-slider{
-  position:absolute;inset:0;background:var(--bg2);border-radius:26px;
-  transition:.3s;border:1.5px solid var(--bor);cursor:pointer;
-}
-.tog-slider:before{
-  content:'';position:absolute;top:2px;right:2px;
-  width:18px;height:18px;background:#888;border-radius:50%;transition:.3s;
-}
-input:checked + .tog-slider{ background:var(--gold);border-color:var(--gold); }
-input:checked + .tog-slider:before{ background:#fff;right:auto;left:2px; }
-
+.tog-sl{position:absolute;inset:0;background:var(--bg3);border-radius:26px;transition:.3s;border:1.5px solid var(--bor);}
+.tog-sl:before{content:'';position:absolute;top:2px;right:2px;width:18px;height:18px;background:#888;border-radius:50%;transition:.3s;}
+input:checked+.tog-sl{background:var(--gold);border-color:var(--gold);}
+input:checked+.tog-sl:before{background:#fff;right:auto;left:2px;}
 #new-orders-badge{
   display:none;
   background:#E05252;color:#fff;
@@ -540,7 +533,7 @@ input:checked + .tog-slider:before{ background:#fff;right:auto;left:2px; }
     <button class="atab"   onclick="aTab('prods',this)">📦 المنتجات</button>
     <button class="atab"   onclick="aTab('custs',this)">👥 العملاء</button>
     <button class="atab"   onclick="aTab('notifs',this)">🔔 الإشعارات</button>
-    <button class="atab"   onclick="aTab('oos',this)">📭 نفاذ الكمية<span id="oos-requests-badge" style="display:none;background:#E05252;color:#fff;border-radius:50%;width:18px;height:18px;font-size:11px;font-weight:900;display:none;align-items:center;justify-content:center;margin-right:4px;vertical-align:middle;"></span></button>
+    <button class="atab"   onclick="aTab('oos',this)" id="atab-oos-btn">📭 طلبات المنتجات<span id="oos-badge" style="display:none;background:#E05252;color:#fff;border-radius:50%;min-width:18px;height:18px;font-size:11px;font-weight:900;padding:0 3px;line-height:18px;text-align:center;margin-right:4px;vertical-align:middle;"></span></button>
         <button class="atab"   onclick="aTab('reels',this)">🎬 الريلز</button>
     <button class="atab"   onclick="aTab('settings',this)">⚙️ الإعدادات</button>
   </div>
@@ -610,16 +603,7 @@ input:checked + .tog-slider:before{ background:#fff;right:auto;left:2px; }
         <div class="f"><label>الوصف</label><input id="p-desc" type="text" placeholder="وصف مختصر للمنتج"></div>
         <div class="f"><label>السعر (دينار عراقي)</label><input id="p-price" type="number" placeholder="مثال: 15000" inputmode="numeric"></div>
         <div class="f"><label>سعر التخفيض (اتركه فارغاً إن لم يوجد خصم)</label><input id="p-discount" type="number" placeholder="مثال: 12000" inputmode="numeric"></div>
-        <div class="f" style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--bg3);border-radius:12px;border:1.5px solid var(--bor);">
-          <div>
-            <div style="font-size:14px;font-weight:700;">نفذت الكمية</div>
-            <div style="font-size:11px;color:var(--muted);margin-top:2px;">عند التفعيل يظهر للعميل "نفذت الكمية"</div>
-          </div>
-          <label style="position:relative;display:inline-block;width:48px;height:26px;cursor:pointer;">
-            <input type="checkbox" id="p-outofstock" style="opacity:0;width:0;height:0;">
-            <span class="tog-slider"></span>
-          </label>
-        </div>
+
         <div class="err" id="p-err"></div>
         <button class="sbtn" onclick="addProduct()">إضافة المنتج ✓</button>
       </div>
@@ -670,11 +654,12 @@ input:checked + .tog-slider:before{ background:#fff;right:auto;left:2px; }
   <div id="reels-admin-list"></div>
     </div>
 
+
     <div id="tab-oos" class="apanel">
-      <div style="padding:12px 12px 0;display:flex;align-items:center;justify-content:space-between;">
-        <p class="slbl" style="margin:0;">📭 طلبات المنتجات المنفذة</p>
+      <div style="padding:14px 14px 0;display:flex;align-items:center;justify-content:space-between;">
+        <p class="slbl" style="margin:0;">📭 زبائن يريدون منتجات نفدت</p>
       </div>
-      <div id="oos-requests-list" style="padding:12px;"></div>
+      <div id="oos-list" style="padding:12px;"></div>
     </div>
 
     <div id="tab-settings" class="apanel">
@@ -815,14 +800,9 @@ input:checked + .tog-slider:before{ background:#fff;right:auto;left:2px; }
       <div class="pd-desc-label">الوصف</div>
       <div class="pd-desc" id="pd-desc"></div>
       <button class="pd-add-btn" id="pd-add-btn">🛒 أضف إلى السلة</button>
-      <div id="pd-oos-banner" style="display:none;background:rgba(224,82,82,.12);border:1.5px solid rgba(224,82,82,.35);border-radius:14px;padding:12px 14px;margin-top:10px;text-align:center;">
-        <div style="font-size:15px;font-weight:900;color:#E05252;margin-bottom:6px;">⛔ نفذت الكمية مؤقتاً</div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">أضغط الزر أدناه وسنبلغك فور توفر المنتج</div>
-        <button id="pd-notify-btn" onclick="requestNotifyOOS()"
-          style="width:100%;padding:11px;background:linear-gradient(135deg,#e67e22,#d35400);color:#fff;border:none;border-radius:12px;font-family:Tajawal,sans-serif;font-size:14px;font-weight:700;cursor:pointer;">
-          🔔 أبلغني عند التوفر
-        </button>
-      </div>
+      <button id="pd-notify-btn" onclick="window.notifyWhenAvailable()" style="display:none;width:100%;margin-top:10px;padding:12px;background:linear-gradient(135deg,#e67e22,#d35400);color:#fff;border:none;border-radius:14px;font-family:Tajawal,sans-serif;font-size:15px;font-weight:700;cursor:pointer;">
+        🔔 أبلغني عند التوفر
+      </button>
       <button class="pd-edit-btn" id="pd-edit-btn" style="display:none;">✏️ تعديل المنتج</button>
     </div>
   </div>
@@ -842,14 +822,11 @@ input:checked + .tog-slider:before{ background:#fff;right:auto;left:2px; }
     <div class="f"><label>الوصف</label><textarea id="ep-desc" style="width:100%;background:var(--bg3);border:1.5px solid var(--bor);color:var(--txt);padding:11px 13px;border-radius:10px;font-family:Tajawal,sans-serif;font-size:14px;outline:none;resize:vertical;min-height:90px;" placeholder="وصف المنتج"></textarea></div>
     <div class="f"><label>السعر (دينار عراقي)</label><input id="ep-price" type="number" inputmode="numeric"></div>
     <div class="f"><label>سعر التخفيض (اتركه فارغاً لإزالة الخصم)</label><input id="ep-discount" type="number" inputmode="numeric" placeholder="مثال: 12000"></div>
-    <div class="f" style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--bg3);border-radius:12px;border:1.5px solid var(--bor);">
-      <div>
-        <div style="font-size:14px;font-weight:700;">نفذت الكمية</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px;">يظهر للعميل "نفذت الكمية"</div>
-      </div>
-      <label style="position:relative;display:inline-block;width:48px;height:26px;cursor:pointer;">
-        <input type="checkbox" id="ep-outofstock" style="opacity:0;width:0;height:0;">
-        <span class="tog-slider"></span>
+
+<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 13px;background:var(--bg3);border-radius:12px;border:1.5px solid var(--bor);margin-bottom:10px;">
+      <div><div style="font-size:14px;font-weight:700;">⛔ نفذت الكمية</div><div style="font-size:11px;color:var(--muted);margin-top:2px;">يظهر للعميل أن الكمية نفدت</div></div>
+      <label style="position:relative;display:inline-block;width:48px;height:26px;cursor:pointer;flex-shrink:0;">
+        <input type="checkbox" id="ep-oos" style="opacity:0;width:0;height:0;"><span class="tog-sl"></span>
       </label>
     </div>
     <div class="err" id="ep-err"></div>
@@ -956,14 +933,11 @@ input:checked + .tog-slider:before{ background:#fff;right:auto;left:2px; }
     <div class="f"><label>وصف قصير</label><textarea id="er-desc" style="width:100%;background:var(--bg3);border:1.5px solid var(--bor);color:var(--txt);padding:11px 13px;border-radius:10px;font-family:Tajawal,sans-serif;font-size:14px;outline:none;resize:vertical;min-height:70px;" placeholder="الوصف"></textarea></div>
     <div class="f"><label>السعر (د.ع)</label><input id="er-price" type="number" inputmode="numeric"></div>
     <div class="f"><label>رابط الفيديو</label><input id="er-url" type="url" placeholder="https://..."></div>
-    <div class="f" style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--bg3);border-radius:12px;border:1.5px solid var(--bor);">
-      <div>
-        <div style="font-size:14px;font-weight:700;">نفذت الكمية</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px;">يظهر "نفذت الكمية" على الريل</div>
-      </div>
-      <label style="position:relative;display:inline-block;width:48px;height:26px;cursor:pointer;">
-        <input type="checkbox" id="er-outofstock" style="opacity:0;width:0;height:0;">
-        <span class="tog-slider"></span>
+
+<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 13px;background:var(--bg3);border-radius:12px;border:1.5px solid var(--bor);margin-bottom:10px;">
+      <div><div style="font-size:14px;font-weight:700;">⛔ نفذت الكمية</div><div style="font-size:11px;color:var(--muted);margin-top:2px;">يظهر للعميل أن الكمية نفدت</div></div>
+      <label style="position:relative;display:inline-block;width:48px;height:26px;cursor:pointer;flex-shrink:0;">
+        <input type="checkbox" id="er-oos" style="opacity:0;width:0;height:0;"><span class="tog-sl"></span>
       </label>
     </div>
     <div class="err" id="er-err"></div>
@@ -1141,7 +1115,7 @@ window.goLogin = function(role){
 // ── Enter app & session ──
 function enterApp(user){
   try{ localStorage.setItem('ss', JSON.stringify({phone:user.phone, role:user.role})); }catch(e){}
-  if(user.role==='admin'){ cart=[]; loadOOSRequests(); go('admin'); }
+  if(user.role==='admin'){ cart=[]; go('admin'); }
   else{
     document.getElementById('greet').textContent='أهلاً، '+user.name+' 🦋';
     // Set WhatsApp link
@@ -1291,15 +1265,13 @@ function renderStore(list){
     plusBtn.className = 'plus';
     plusBtn.textContent = '+';
     if(p.outOfStock){
-      // Hide plus btn, show OOS overlay on card
-      plusBtn.style.display = 'none';
-      var oosOv = document.createElement('div');
-      oosOv.style.cssText='position:absolute;bottom:0;left:0;right:0;background:rgba(180,0,0,0.82);color:#fff;font-family:Tajawal,sans-serif;font-size:12px;font-weight:900;text-align:center;padding:6px;border-radius:0 0 14px 14px;z-index:3;';
-      oosOv.textContent='⛔ نفذت الكمية';
-      card.style.position='relative';
-      card.appendChild(oosOv);
-      // Disable card click to add
-      card.style.cursor='default';
+      plusBtn.disabled = true;
+      plusBtn.style.opacity = '0.3';
+      plusBtn.style.cursor = 'not-allowed';
+      var oosTag = document.createElement('div');
+      oosTag.style.cssText = 'position:absolute;bottom:0;left:0;right:0;background:rgba(170,0,0,0.85);color:#fff;font-family:Tajawal,sans-serif;font-size:12px;font-weight:900;text-align:center;padding:5px 0;border-radius:0 0 14px 14px;z-index:3;pointer-events:none;';
+      oosTag.textContent = '⛔ نفذت الكمية';
+      card.appendChild(oosTag);
     } else {
       plusBtn.addEventListener('click', (function(pid, pname){
         return function(e){
@@ -1475,7 +1447,7 @@ window.aTab=function(name,el){
   }
   if(name==='reels')    renderAdminReels();
   if(name==='settings'){ loadFreeDeliverySettings(); }
-  if(name==='oos'){ renderOOSRequests(); }
+  if(name==='oos'){ renderOOSList(); }
 };
 
 function renderAdmin(){
@@ -1709,15 +1681,13 @@ window.addProduct=async function(){
   if(discount!==null && (isNaN(discount)||discount<=0||discount>=price))
     return showErr('p-err','❌ سعر التخفيض يجب أن يكون أقل من السعر الأصلي');
   var pid='p'+Date.now();
-  var outOfStock = document.getElementById('p-outofstock').checked;
-  var prod={id:pid,name:name,desc:desc,price:price,img:pendingImg||null,outOfStock:outOfStock};
+  var prod={id:pid,name:name,desc:desc,price:price,img:pendingImg||null};
   if(discount) prod.discount=discount;
   await setDoc(doc(db,'products',pid),prod);
   document.getElementById('p-name').value='';
   document.getElementById('p-desc').value='';
   document.getElementById('p-price').value='';
   document.getElementById('p-discount').value='';
-  document.getElementById('p-outofstock').checked=false;
   document.querySelector('#iup input[type=file]').value='';
   var pi=document.getElementById('pimg'); pi.src=''; pi.style.display='none';
   document.querySelector('#iup .di').style.display='';
@@ -1746,7 +1716,7 @@ function renderProds(query){
   list.forEach(function(p){
     h += '<div style="background:var(--bg2);border-radius:14px;overflow:visible;border:1px solid var(--bor);position:relative;">'+
       discountBadgeHTML(p.price,p.discount)+
-      (p.outOfStock ? '<div style="position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);border-radius:14px;z-index:2;display:flex;align-items:center;justify-content:center;pointer-events:none;"><div style=\"background:#E05252;color:#fff;font-size:11px;font-weight:900;padding:4px 10px;border-radius:20px;transform:rotate(-5deg);\">نفذت الكمية</div></div>' : '')+
+      (p.outOfStock ? '<div style="position:absolute;top:8px;left:8px;background:rgba(170,0,0,0.9);color:#fff;font-size:10px;font-weight:900;padding:3px 8px;border-radius:20px;z-index:3;">⛔ نفذ</div>' : '')+
       '<div style="aspect-ratio:1;overflow:hidden;background:var(--bg3);border-radius:14px 14px 0 0;">'+
         (p.img ? '<img src="'+p.img+'" style="width:100%;height:100%;object-fit:cover;">' : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:40px;">🛍️</div>')+
       '</div>'+
@@ -2058,20 +2028,22 @@ window.openProdDetail = function(pid, from) {
     editBtn.onclick = function(){ openEditProduct(pid); };
   } else {
     editBtn.style.display = 'none';
-    var oosBanner = document.getElementById('pd-oos-banner');
-    var notifyBtn = document.getElementById('pd-notify-btn');
+    addBtn.style.display   = 'block';
     if(p.outOfStock){
-      addBtn.style.display    = 'none';
-      oosBanner.style.display = 'block';
-      // Reset notify btn
-      if(notifyBtn){ notifyBtn.disabled=false; notifyBtn.textContent='🔔 أبلغني عند التوفر'; }
+      addBtn.disabled      = true;
+      addBtn.textContent   = '⛔ نفذت الكمية';
+      addBtn.style.opacity = '0.5';
+      addBtn.style.cursor  = 'not-allowed';
+      addBtn.onclick       = null;
+      var nb = document.getElementById('pd-notify-btn');
+      if(nb){ nb.style.display='block'; nb.disabled=false; nb.textContent='🔔 أبلغني عند التوفر'; }
     } else {
-      addBtn.style.display    = 'block';
-      addBtn.disabled         = false;
-      addBtn.textContent      = '🛒 أضف إلى السلة';
-      addBtn.style.opacity    = '1';
-      addBtn.style.cursor     = 'pointer';
-      oosBanner.style.display = 'none';
+      addBtn.disabled      = false;
+      addBtn.textContent   = '🛒 أضف إلى السلة';
+      addBtn.style.opacity = '1';
+      addBtn.style.cursor  = 'pointer';
+      var nb2 = document.getElementById('pd-notify-btn');
+      if(nb2) nb2.style.display = 'none';
       addBtn.onclick = function(){
         addToCart(pid);
         showToast('✅ أُضيف "'+p.name+'" إلى السلة');
@@ -2093,7 +2065,7 @@ window.openEditProduct = function(pid){
   document.getElementById('ep-desc').value  = p.desc;
   document.getElementById('ep-price').value      = p.price;
   document.getElementById('ep-discount').value   = p.discount || '';
-  document.getElementById('ep-outofstock').checked = p.outOfStock || false;
+  document.getElementById('ep-oos').checked       = p.outOfStock || false;
 
   var epImg = document.getElementById('ep-img');
   if(p.img){
@@ -2148,7 +2120,7 @@ window.saveEditProduct = async function(){
     { err.textContent='❌ سعر التخفيض يجب أن يكون أقل من السعر الأصلي'; err.style.display='block'; return; }
 
   try{
-    var outOfStock = document.getElementById('ep-outofstock').checked;
+    var outOfStock = document.getElementById('ep-oos').checked;
     var updates = { name:name, desc:desc, price:price, img:editProdImg, outOfStock:outOfStock };
     if(discount) updates.discount = discount;
     else updates.discount = null;  // remove discount if empty
@@ -2597,16 +2569,22 @@ function renderReelsList(list){
     addBtn.className = 'reel-add';
     if(r.outOfStock){
       addBtn.innerHTML = '⛔ نفذت الكمية';
-      addBtn.style.background = 'rgba(224,82,82,0.7)';
-      addBtn.style.cursor = 'default';
+      addBtn.disabled = true;
+      addBtn.style.background = 'rgba(150,0,0,0.7)';
+      addBtn.style.cursor = 'not-allowed';
+      // Notify button for reel
+      var notifyBtn = document.createElement('button');
+      notifyBtn.innerHTML = '🔔 أبلغني';
+      notifyBtn.style.cssText = 'padding:8px 14px;background:linear-gradient(135deg,#e67e22,#d35400);color:#fff;border:none;border-radius:20px;font-family:Tajawal,sans-serif;font-size:12px;font-weight:700;cursor:pointer;margin-right:6px;';
       (function(reel){
-        addBtn.addEventListener('click', function(e){
+        notifyBtn.addEventListener('click', function(e){
           e.stopPropagation();
-          // Open product detail to request notification
-          currentProdId = reel.id;
-          showToast('🔔 افتح تفاصيل المنتج لطلب الإبلاغ عند التوفر');
+          window.notifyWhenAvailableReel(reel);
+          notifyBtn.disabled = true;
+          notifyBtn.textContent = '✅ تم';
         });
       })(r);
+      bottom.appendChild(notifyBtn);
     } else {
       addBtn.innerHTML = '🛒 أضف للسلة';
       (function(reel){
@@ -2787,8 +2765,8 @@ window.saveEditReel = async function(){
   if(!price) { err.textContent='❌ أدخل السعر';   err.style.display='block'; return; }
   if(!url)   { err.textContent='❌ أدخل الرابط';  err.style.display='block'; return; }
   try{
-    var oosR = document.getElementById('er-outofstock').checked;
-    await updateDoc(doc(db,'reels',id),{name:name,desc:desc,price:Number(price),url:url,outOfStock:oosR});
+    var reelOOS = document.getElementById('er-oos').checked;
+    await updateDoc(doc(db,'reels',id),{name:name,desc:desc,price:Number(price),url:url,outOfStock:reelOOS});
     closeModal('edit-reel-ov');
     showToast('✅ تم تحديث الريل');
   }catch(e2){ err.textContent='❌ خطأ: '+e2.message; err.style.display='block'; }
@@ -3056,102 +3034,157 @@ function checkFreeDelivery(userPhone){
 
 
 // ══════════════════════════════════════
-//  OUT OF STOCK NOTIFY SYSTEM
+//  OOS NOTIFY SYSTEM
 // ══════════════════════════════════════
-
-window.requestNotifyOOS = async function(){
-  if(!me){ showToast('❌ يجب تسجيل الدخول أولاً'); return; }
-  var btn = document.getElementById('pd-notify-btn');
-  if(btn){ btn.disabled=true; btn.textContent='جاري الإرسال...'; }
-  try{
-    var reqId = 'oos_'+Date.now();
-    await setDoc(doc(db,'oos_requests',reqId),{
-      id: reqId,
-      productId:   currentProdId,
-      productName: products.find(function(x){ return x.id===currentProdId; })?.name || currentProdId,
-      customerName:  me.name,
-      customerPhone: me.phone,
-      date: new Date().toLocaleDateString('ar-IQ'),
-      notified: false
-    });
-    if(btn){ btn.textContent='✅ تم! سنبلغك عند التوفر'; }
-    showToast('✅ سيتم إبلاغك عند توفر المنتج');
-  }catch(e){
-    if(btn){ btn.disabled=false; btn.textContent='🔔 أبلغني عند التوفر'; }
-    showToast('❌ خطأ: '+e.message);
-  }
-};
-
-// Load OOS requests for admin
 var oosRequests = [];
-function loadOOSRequests(){
-  onSnapshot(collection(db,'oos_requests'), function(snap){
-    oosRequests = [];
-    snap.forEach(function(d){ var r=d.data(); r.id=d.id; oosRequests.push(r); });
-    renderOOSRequests();
-    // Update badge on OOS tab
-    var pending = oosRequests.filter(function(r){ return !r.notified; });
-    var badge = document.getElementById('oos-requests-badge');
-    if(badge){
-      if(pending.length>0){ badge.textContent=pending.length; badge.style.display='inline-flex'; }
-      else { badge.style.display='none'; }
-    }
+
+onSnapshot(collection(db,'oos_requests'), function(snap){
+  oosRequests = [];
+  snap.forEach(function(d){ var r=d.data(); r.docId=d.id; oosRequests.push(r); });
+  // Update badge
+  var pending = oosRequests.filter(function(r){ return !r.notified; });
+  var badge = document.getElementById('oos-badge');
+  if(badge){
+    if(pending.length){ badge.textContent=pending.length; badge.style.display='inline-block'; }
+    else { badge.style.display='none'; }
+  }
+  renderOOSList();
+});
+
+function saveOOSRequest(productId, productName){
+  if(!me){ showToast('❌ يجب تسجيل الدخول أولاً'); return; }
+  var reqId = 'oos_'+Date.now();
+  setDoc(doc(db,'oos_requests',reqId),{
+    productId:    productId,
+    productName:  productName,
+    customerName: me.name,
+    customerPhone: me.phone,
+    date: new Date().toLocaleDateString('ar-IQ'),
+    notified: false
+  }).then(function(){
+    showToast('✅ سيتم إبلاغك عند توفر المنتج');
+  }).catch(function(e){
+    showToast('❌ خطأ: '+e.message);
   });
 }
 
-function renderOOSRequests(){
-  var el = document.getElementById('oos-requests-list');
+window.notifyWhenAvailable = function(){
+  var p = products.find(function(x){ return x.id===currentProdId; });
+  if(!p) return;
+  var btn = document.getElementById('pd-notify-btn');
+  if(btn){ btn.disabled=true; btn.textContent='⏳ جاري...'; }
+  saveOOSRequest(p.id, p.name);
+  if(btn){ setTimeout(function(){ btn.textContent='✅ تم! سنبلغك عند التوفر'; },600); }
+};
+
+window.notifyWhenAvailableReel = function(reel){
+  saveOOSRequest(reel.id, reel.name);
+};
+
+function renderOOSList(){
+  var el = document.getElementById('oos-list');
   if(!el) return;
   var pending = oosRequests.filter(function(r){ return !r.notified; });
   if(!pending.length){
-    el.innerHTML='<div class="no-data" style="padding:30px 0;">✅<br>لا توجد طلبات حالياً</div>';
+    el.innerHTML = '<div class="no-data" style="padding:30px 0;">&#x2705;<br>لا توجد طلبات حالياً</div>';
     return;
   }
-  var h='';
+  el.innerHTML='';
   pending.forEach(function(r){
-    var waLink = 'https://wa.me/964'+r.customerPhone.replace(/^0/,'')+
-      '?text='+encodeURIComponent('مرحباً '+r.customerName+'، المنتج الذي طلبته ('+r.productName+') أصبح متاحاً الآن في متجر MW Cosmetics 🎉');
-    h+='<div style="background:var(--bg2);border:1.5px solid var(--bor);border-radius:14px;padding:14px;margin-bottom:10px;">'+
-      '<div style="font-size:14px;font-weight:700;margin-bottom:4px;">📦 '+r.productName+'</div>'+
-      '<div style="font-size:13px;color:var(--muted);margin-bottom:10px;">'+
-        '👤 '+r.customerName+' &nbsp;|&nbsp; 📞 '+r.customerPhone+
-        '<br><span style="font-size:11px;">'+r.date+'</span>'+
-      '</div>'+
-      '<div style="display:flex;gap:8px;">'+
-        '<a href="'+waLink+'" target="_blank" style="flex:1;display:block;text-align:center;padding:9px;background:#25a244;color:#fff;border-radius:10px;text-decoration:none;font-family:Tajawal,sans-serif;font-size:13px;font-weight:700;">'+
-          '📲 إبلاغ عبر واتساب'+
-        '</a>'+
-        '<button onclick="markOOSNotified(''+r.id+'')" '+
-          'style="flex:0 0 auto;padding:9px 14px;background:var(--bg3);border:1.5px solid var(--bor);color:var(--muted);border-radius:10px;font-family:Tajawal,sans-serif;font-size:12px;cursor:pointer;">'+
-          '✅ تم الإبلاغ'+
-        '</button>'+
-      '</div>'+
-    '</div>';
+    var waNum  = '964'+r.customerPhone.replace(/^0/,'');
+    var waMsg  = encodeURIComponent('مرحباً '+r.customerName+' - المنتج ('+r.productName+') اصبح متاحاً في متجر MW Cosmetics! تفضل: https://hosammn.github.io/CosmrticsMW');
+    var waLink = 'https://wa.me/'+waNum+'?text='+waMsg;
+
+    var card = document.createElement('div');
+    card.style.cssText = 'background:var(--bg2);border:1.5px solid var(--bor);border-radius:14px;padding:14px;margin-bottom:10px;';
+
+    var title = document.createElement('div');
+    title.style.cssText = 'font-size:14px;font-weight:700;margin-bottom:6px;';
+    title.textContent = '📦 '+r.productName;
+
+    var info = document.createElement('div');
+    info.style.cssText = 'font-size:13px;color:var(--muted);margin-bottom:10px;';
+    info.innerHTML = '👤 '+r.customerName+'&nbsp;&nbsp;📞 '+r.customerPhone+'<br><span style="font-size:11px;">'+r.date+'</span>';
+
+    var btns = document.createElement('div');
+    btns.style.cssText = 'display:flex;gap:8px;';
+
+    var waBtn = document.createElement('a');
+    waBtn.href = waLink;
+    waBtn.target = '_blank';
+    waBtn.style.cssText = 'flex:1;display:block;text-align:center;padding:10px;background:#25a244;color:#fff;border-radius:10px;text-decoration:none;font-family:Tajawal,sans-serif;font-size:13px;font-weight:700;';
+    waBtn.textContent = '📲 إبلاغ عبر واتساب';
+
+    var doneBtn = document.createElement('button');
+    doneBtn.style.cssText = 'padding:10px 14px;background:var(--bg3);border:1.5px solid var(--bor);color:var(--muted);border-radius:10px;font-family:Tajawal,sans-serif;font-size:12px;cursor:pointer;';
+    doneBtn.textContent = '✅ تم الإبلاغ';
+    (function(docId){
+      doneBtn.addEventListener('click', function(){ window.markOOSNotified(docId); });
+    })(r.docId);
+
+    btns.appendChild(waBtn);
+    btns.appendChild(doneBtn);
+    card.appendChild(title);
+    card.appendChild(info);
+    card.appendChild(btns);
+    el.appendChild(card);
   });
-  el.innerHTML=h;
 }
 
-window.markOOSNotified = async function(id){
+window.markOOSNotified = async function(docId){
   try{
-    await updateDoc(doc(db,'oos_requests',id),{ notified:true });
-    showToast('✅ تم تحديد الطلب كمُبلَّغ');
+    await updateDoc(doc(db,'oos_requests',docId),{ notified:true });
+    showToast('✅ تم تحديده كمُبلَّغ');
   }catch(e){ showToast('❌ خطأ'); }
 };
 
 // ── BOOT ──
 async function boot(){
+  // ── Load from localStorage cache first (instant open) ──
+  try{
+    var cp = localStorage.getItem('mw-cache-products');
+    var co = localStorage.getItem('mw-cache-orders');
+    if(cp) products = JSON.parse(cp);
+    if(co) orders   = JSON.parse(co);
+  }catch(e){}
+
+  // ── If we have cached session + data, enter app immediately ──
+  var enteredFromCache = false;
+  try{
+    var saved = localStorage.getItem('ss');
+    if(saved && products.length){
+      var sess = JSON.parse(saved);
+      if(sess.role==='admin' && sess.phone===ADMIN.phone){
+        me = ADMIN; enterApp(ADMIN); enteredFromCache = true;
+      } else {
+        var cachedUsers = localStorage.getItem('mw-cache-users');
+        if(cachedUsers){
+          users = JSON.parse(cachedUsers);
+          var found = users.find(function(u){ return u.phone===sess.phone&&u.role==='customer'; });
+          if(found){ me=found; enterApp(found); enteredFromCache=true; }
+        }
+      }
+    }
+  }catch(e){}
+
+  // If entered from cache, skip loading screen entirely
+  if(!enteredFromCache) go('loading');
+
   var timedOut=false;
   var timeout=setTimeout(function(){
     timedOut=true;
-    document.querySelector('.loading-txt').textContent='⚠️ تعذر الاتصال';
-    setTimeout(function(){ go('splash'); },2000);
+    if(!enteredFromCache){
+      document.querySelector('.loading-txt').textContent='⚠️ تعذر الاتصال';
+      setTimeout(function(){ go('splash'); },2000);
+    }
   },10000);
 
   try{
-    // Load all data
+    // Load all data (background if already entered from cache)
     var uSnap=await getDocs(collection(db,'users'));
     users=[];
     uSnap.forEach(function(d){ var u=d.data(); u.id=d.id; users.push(u); });
+    try{ localStorage.setItem('mw-cache-users', JSON.stringify(users)); }catch(e){}
     if(!users.find(function(u){ return u.id==='admin'; })){
       await setDoc(doc(db,'users','admin'),ADMIN);
       users.push(Object.assign({},ADMIN));
@@ -3160,10 +3193,12 @@ async function boot(){
     var pSnap=await getDocs(collection(db,'products'));
     products=[];
     pSnap.forEach(function(d){ var p=d.data(); p.id=d.id; products.push(p); });
+    try{ localStorage.setItem('mw-cache-products', JSON.stringify(products)); }catch(e){}
 
     var oSnap=await getDocs(collection(db,'orders'));
     orders=[];
     oSnap.forEach(function(d){ var o=d.data(); o.id=d.id; orders.push(o); });
+    try{ localStorage.setItem('mw-cache-orders', JSON.stringify(orders)); }catch(e){}
 
     if(timedOut) return;
     clearTimeout(timeout);
@@ -3227,12 +3262,14 @@ async function boot(){
       }
     }catch(e){}
 
-    go('splash');
+    if(!enteredFromCache) go('splash');
   }catch(e){
     if(!timedOut){
       clearTimeout(timeout);
-      document.querySelector('.loading-txt').textContent='خطأ: '+e.message;
-      setTimeout(function(){ go('splash'); },3000);
+      if(!enteredFromCache){
+        document.querySelector('.loading-txt').textContent='خطأ: '+e.message;
+        setTimeout(function(){ go('splash'); },3000);
+      }
     }
   }
 }
