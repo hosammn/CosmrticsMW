@@ -3428,6 +3428,13 @@ async function boot(){
   };
 })();
 
+// Register Service Worker (required for TWA)
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('./sw.js')
+    .then(function(){ console.log('SW registered'); })
+    .catch(function(e){ console.log('SW error', e); });
+}
+
 boot();
 </script>
 
