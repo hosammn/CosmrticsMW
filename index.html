@@ -1083,6 +1083,7 @@ input:checked+.tog-sl:before{background:#fff;right:auto;left:2px;}
 
 <script type="module">
 import { initializeApp }      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
 import { getFirestore, collection, doc,
          getDocs, getDoc, setDoc, updateDoc,
          deleteDoc, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
@@ -1097,6 +1098,11 @@ const app = initializeApp({
   appId:             "1:654394172526:web:e40f0488b91ae31a1a727f"
 });
 const db = getFirestore(app);
+
+// ── Messaging ──
+var messaging = null;
+try{ messaging = getMessaging(app); }catch(e){}
+var VAPID_KEY = 'BCtic-YUkDDQxJKC4kneYg_02C0C8Sf8CT8tJ1v_qP8PG9cIZ2llYhHX_NNGMTWHFDYMtNgXtZL2wOGOc9O7xa4';
 
 // ── State ──
 var users    = [];
@@ -2285,6 +2291,16 @@ window.markAllRead = function(){
 };
 
 // Admin: send notification
+window.sendPushFromAdmin = async function(){
+  var title = document.getElementById('push-title').value.trim();
+  var body  = document.getElementById('push-body').value.trim();
+  if(!title){ showToast('❌ اكتب عنوان الإشعار'); return; }
+  if(!body){  showToast('❌ اكتب نص الإشعار'); return; }
+  await window.sendPushToAll(title, body);
+  document.getElementById('push-title').value = '';
+  document.getElementById('push-body').value  = '';
+};
+
 window.sendNotif = async function(){
   var title = document.getElementById('nt-title').value.trim();
   var msg   = document.getElementById('nt-msg').value.trim();
@@ -3427,6 +3443,81 @@ async function boot(){
     }
   };
 })();
+
+// ══════════════════════════════════════
+//  FCM PUSH NOTIFICATIONS
+// ══════════════════════════════════════
+
+// Request permission + get token
+async function initFCM(){
+  if(!messaging) return;
+  try{
+    var perm = await Notification.requestPermission();
+    if(perm !== 'granted'){ console.log('Notification denied'); return; }
+
+    var token = await getToken(messaging, { vapidKey: VAPID_KEY });
+    if(!token){ console.log('No FCM token'); return; }
+
+    // Save token to Firestore under user's phone
+    if(me && me.phone){
+      await setDoc(doc(db,'fcm_tokens', me.phone), {
+        token: token,
+        phone: me.phone,
+        name:  me.name || '',
+        updatedAt: new Date().toISOString()
+      });
+      console.log('FCM token saved ✅');
+    }
+
+    // Handle foreground messages (app is open)
+    onMessage(messaging, function(payload){
+      var title = payload.notification && payload.notification.title ? payload.notification.title : 'MW Cosmetics';
+      var body  = payload.notification && payload.notification.body  ? payload.notification.body  : '';
+      showToast('🔔 '+title+': '+body);
+    });
+
+  }catch(e){ console.log('FCM error:', e); }
+}
+
+// Send push notification to specific user (admin only)
+window.sendPushToUser = async function(phone, title, body){
+  try{
+    var tokenDoc = await getDoc(doc(db,'fcm_tokens',phone));
+    if(!tokenDoc.exists()){ showToast('❌ المستخدم لا يملك إشعارات مفعّلة'); return; }
+    var token = tokenDoc.data().token;
+
+    // Save to push_queue - sw.js will handle sending
+    await setDoc(doc(db,'push_queue', Date.now().toString()),{
+      token: token,
+      title: title,
+      body:  body,
+      phone: phone,
+      sent:  false,
+      createdAt: new Date().toISOString()
+    });
+    showToast('📲 تم إرسال الإشعار!');
+  }catch(e){ showToast('❌ خطأ: '+e.message); }
+};
+
+// Send push to ALL users
+window.sendPushToAll = async function(title, body){
+  try{
+    var snap = await getDocs(collection(db,'fcm_tokens'));
+    var batch = [];
+    snap.forEach(function(d){
+      batch.push(setDoc(doc(db,'push_queue', Date.now().toString()+'_'+d.id),{
+        token: d.data().token,
+        title: title,
+        body:  body,
+        phone: d.id,
+        sent:  false,
+        createdAt: new Date().toISOString()
+      }));
+    });
+    await Promise.all(batch);
+    showToast('📲 تم الإرسال لجميع المستخدمين!');
+  }catch(e){ showToast('❌ خطأ: '+e.message); }
+};
 
 // Register Service Worker (required for TWA)
 if('serviceWorker' in navigator){
