@@ -1179,7 +1179,7 @@ window.goLogin = function(role){
 // ── Enter app & session ──
 function enterApp(user){
   try{ localStorage.setItem('ss', JSON.stringify({phone:user.phone, role:user.role})); }catch(e){}
-  if(user.role==='admin'){ cart=[]; go('admin'); }
+  if(user.role==='admin'){ cart=[]; go('admin'); setTimeout(initFCM, 2000); }
   else{
     document.getElementById('greet').textContent='أهلاً، '+user.name+' 🦋';
     // Set WhatsApp link
@@ -3448,35 +3448,77 @@ async function boot(){
 //  FCM PUSH NOTIFICATIONS
 // ══════════════════════════════════════
 
-// Request permission + get token
+// Request permission + get token (works on all browsers)
 async function initFCM(){
-  if(!messaging) return;
+  // Check if notifications are supported
+  if(!('Notification' in window)){
+    console.log('Notifications not supported');
+    return;
+  }
+
+  // Safari iOS doesn't support FCM - skip silently
+  var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  var isStandalone = window.navigator.standalone === true;
+  if(isIOS && !isStandalone){
+    console.log('iOS Safari: FCM not supported');
+    return;
+  }
+
+  if(!messaging){
+    console.log('FCM messaging not initialized');
+    return;
+  }
+
   try{
-    var perm = await Notification.requestPermission();
-    if(perm !== 'granted'){ console.log('Notification denied'); return; }
-
-    var token = await getToken(messaging, { vapidKey: VAPID_KEY });
-    if(!token){ console.log('No FCM token'); return; }
-
-    // Save token to Firestore under user's phone
-    if(me && me.phone){
-      await setDoc(doc(db,'fcm_tokens', me.phone), {
-        token: token,
-        phone: me.phone,
-        name:  me.name || '',
-        updatedAt: new Date().toISOString()
-      });
-      console.log('FCM token saved ✅');
+    // Request permission
+    var perm = Notification.permission;
+    if(perm === 'default'){
+      perm = await Notification.requestPermission();
+    }
+    if(perm !== 'granted'){
+      console.log('Notification permission denied');
+      return;
     }
 
-    // Handle foreground messages (app is open)
+    // Get FCM token
+    var swReg = null;
+    try{
+      swReg = await navigator.serviceWorker.ready;
+    }catch(e){}
+
+    var tokenOptions = { vapidKey: VAPID_KEY };
+    if(swReg) tokenOptions.serviceWorkerRegistration = swReg;
+
+    var token = await getToken(messaging, tokenOptions);
+    if(!token){ console.log('No FCM token'); return; }
+
+    // Save token to Firestore
+    if(me && me.phone){
+      await setDoc(doc(db,'fcm_tokens', me.phone),{
+        token:     token,
+        phone:     me.phone,
+        name:      me.name || '',
+        role:      me.role || 'customer',
+        updatedAt: new Date().toISOString()
+      });
+      console.log('FCM token saved ✅', me.phone);
+    }
+
+    // Foreground messages (app open)
     onMessage(messaging, function(payload){
-      var title = payload.notification && payload.notification.title ? payload.notification.title : 'MW Cosmetics';
-      var body  = payload.notification && payload.notification.body  ? payload.notification.body  : '';
+      var title = (payload.notification && payload.notification.title) ? payload.notification.title : 'MW Cosmetics';
+      var body  = (payload.notification && payload.notification.body)  ? payload.notification.body  : '';
+      // Show as toast + browser notification
       showToast('🔔 '+title+': '+body);
+      if(Notification.permission === 'granted'){
+        new Notification(title, {
+          body: body,
+          icon: '/CosmrticsMW/icon-192.png'
+        });
+      }
     });
 
-  }catch(e){ console.log('FCM error:', e); }
+  }catch(e){ console.log('FCM error:', e.message); }
 }
 
 // Send push notification to specific user (admin only)
