@@ -3489,46 +3489,43 @@ function initOneSignal(){
 }
 
 // Send notification to ALL users (admin only)
-window.sendPushToAll = async function(title, body){
+// OneSignal REST helper
+async function onesignalSend(payload){
   try{
+    payload.app_id           = 'e9bd9007-1e73-4d4f-895f-10e1999c9952';
+    payload.url              = 'https://hosammn.github.io/CosmrticsMW';
+    payload.chrome_web_icon  = 'https://hosammn.github.io/CosmrticsMW/icon-192.png';
+    payload.firefox_icon     = 'https://hosammn.github.io/CosmrticsMW/icon-192.png';
     var resp = await fetch('https://onesignal.com/api/v1/notifications',{
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        app_id:             'e9bd9007-1e73-4d4f-895f-10e1999c9952',
-        included_segments:  ['All'],
-        headings:           { ar: title, en: title },
-        contents:           { ar: body,  en: body  },
-        url:                'https://hosammn.github.io/CosmrticsMW',
-        chrome_web_icon:    'https://hosammn.github.io/CosmrticsMW/icon-192.png',
-        firefox_icon:       'https://hosammn.github.io/CosmrticsMW/icon-192.png'
-      })
+      method:  'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': 'Key njn27yluwezpmrxxmnxmq622v'
+      },
+      body: JSON.stringify(payload)
     });
     var data = await resp.json();
-    if(data.id){ showToast('📲 تم إرسال الإشعار للجميع!'); }
-    else { showToast('❌ خطأ: '+JSON.stringify(data.errors)); }
-  }catch(e){ showToast('❌ خطأ: '+e.message); }
+    return data;
+  }catch(e){ console.log('OneSignal send error:', e); return null; }
+}
+
+window.sendPushToAll = async function(title, body){
+  var data = await onesignalSend({
+    included_segments: ['All'],
+    headings:  { ar: title, en: title },
+    contents:  { ar: body,  en: body  }
+  });
+  if(data && data.id) showToast('📲 تم إرسال الإشعار للجميع!');
+  else showToast('❌ خطأ في الإرسال');
 };
 
-// Send notification to specific user by phone
 window.sendPushToUser = async function(phone, title, body){
-  try{
-    var resp = await fetch('https://onesignal.com/api/v1/notifications',{
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        app_id:           'e9bd9007-1e73-4d4f-895f-10e1999c9952',
-        filters:          [{ field:'tag', key:'phone', relation:'=', value: phone }],
-        headings:         { ar: title, en: title },
-        contents:         { ar: body,  en: body  },
-        url:              'https://hosammn.github.io/CosmrticsMW',
-        chrome_web_icon:  'https://hosammn.github.io/CosmrticsMW/icon-192.png'
-      })
-    });
-    var data = await resp.json();
-    if(data.id){ showToast('📲 تم إرسال الإشعار!'); }
-    else { showToast('❌ خطأ'); }
-  }catch(e){ showToast('❌ خطأ: '+e.message); }
+  var data = await onesignalSend({
+    filters:  [{ field:'tag', key:'phone', relation:'=', value: phone }],
+    headings: { ar: title, en: title },
+    contents: { ar: body,  en: body  }
+  });
+  if(data && data.id) showToast('📲 تم إرسال الإشعار!');
 };
 
 // Send to admin only
