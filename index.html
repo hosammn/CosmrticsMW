@@ -3,6 +3,29 @@
 <head>
 <meta charset="UTF-8">
   <meta name="theme-color" content="#1a1a2e">
+  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+  <script>
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    OneSignalDeferred.push(async function(OneSignal) {
+      await OneSignal.init({
+        appId: "e9bd9007-1e73-4d4f-895f-10e1999c9952",
+        notifyButton: { enable: false },
+        promptOptions: {
+          slidedown: {
+            prompts: [{
+              type: "push",
+              autoPrompt: false,
+              text: {
+                actionMessage: "MW Cosmetics تريد إرسال إشعارات لك من",
+                acceptButton: "السماح",
+                cancelButton: "لاحقاً"
+              }
+            }]
+          }
+        }
+      });
+    });
+  </script>
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -1083,7 +1106,6 @@ input:checked+.tog-sl:before{background:#fff;right:auto;left:2px;}
 
 <script type="module">
 import { initializeApp }      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
 import { getFirestore, collection, doc,
          getDocs, getDoc, setDoc, updateDoc,
          deleteDoc, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
@@ -1098,11 +1120,6 @@ const app = initializeApp({
   appId:             "1:654394172526:web:e40f0488b91ae31a1a727f"
 });
 const db = getFirestore(app);
-
-// ── Messaging ──
-var messaging = null;
-try{ messaging = getMessaging(app); }catch(e){}
-var VAPID_KEY = 'BCtic-YUkDDQxJKC4kneYg_02C0C8Sf8CT8tJ1v_qP8PG9cIZ2llYhHX_NNGMTWHFDYMtNgXtZL2wOGOc9O7xa4';
 
 // ── State ──
 var users    = [];
@@ -1179,7 +1196,7 @@ window.goLogin = function(role){
 // ── Enter app & session ──
 function enterApp(user){
   try{ localStorage.setItem('ss', JSON.stringify({phone:user.phone, role:user.role})); }catch(e){}
-  if(user.role==='admin'){ cart=[]; go('admin'); setTimeout(initFCM, 2000); }
+  if(user.role==='admin'){ cart=[]; go('admin'); setTimeout(initOneSignal, 1500); }
   else{
     document.getElementById('greet').textContent='أهلاً، '+user.name+' 🦋';
     // Set WhatsApp link
@@ -2011,6 +2028,8 @@ window.sendForgotWA = async function(){
       userId: found.id,
       expiry: Date.now() + 10*60*1000
     });
+    // Notify admin
+    window.sendPushToAdmin('🔑 طلب استعادة كلمة مرور', 'العميل ' + (found.name||phoneClean) + ' يطلب استعادة كلمة مروره');
 
     // Open WhatsApp with ready message
     var msg = encodeURIComponent(
@@ -3178,6 +3197,7 @@ function saveOOSRequest(productId, productName){
     notified: false
   }).then(function(){
     showToast('✅ سيتم إبلاغك عند توفر المنتج');
+    window.sendPushToAdmin('📭 طلب إبلاغ بتوفر منتج', me.name + ' يريد منتج: ' + productName);
   }).catch(function(e){
     showToast('❌ خطأ: '+e.message);
   });
@@ -3445,120 +3465,75 @@ async function boot(){
 })();
 
 // ══════════════════════════════════════
-//  FCM PUSH NOTIFICATIONS
+//  ONESIGNAL PUSH NOTIFICATIONS
 // ══════════════════════════════════════
 
-// Request permission + get token (works on all browsers)
-async function initFCM(){
-  // Check if notifications are supported
-  if(!('Notification' in window)){
-    console.log('Notifications not supported');
-    return;
-  }
-
-  // Safari iOS doesn't support FCM - skip silently
-  var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-  var isStandalone = window.navigator.standalone === true;
-  if(isIOS && !isStandalone){
-    console.log('iOS Safari: FCM not supported');
-    return;
-  }
-
-  if(!messaging){
-    console.log('FCM messaging not initialized');
-    return;
-  }
-
-  try{
-    // Request permission
-    var perm = Notification.permission;
-    if(perm === 'default'){
-      perm = await Notification.requestPermission();
-    }
-    if(perm !== 'granted'){
-      console.log('Notification permission denied');
-      return;
-    }
-
-    // Get FCM token
-    var swReg = null;
+function initOneSignal(){
+  if(typeof OneSignalDeferred === 'undefined') return;
+  OneSignalDeferred.push(async function(OneSignal){
     try{
-      swReg = await navigator.serviceWorker.ready;
-    }catch(e){}
-
-    var tokenOptions = { vapidKey: VAPID_KEY };
-    if(swReg) tokenOptions.serviceWorkerRegistration = swReg;
-
-    var token = await getToken(messaging, tokenOptions);
-    if(!token){ console.log('No FCM token'); return; }
-
-    // Save token to Firestore
-    if(me && me.phone){
-      await setDoc(doc(db,'fcm_tokens', me.phone),{
-        token:     token,
-        phone:     me.phone,
-        name:      me.name || '',
-        role:      me.role || 'customer',
-        updatedAt: new Date().toISOString()
-      });
-      console.log('FCM token saved ✅', me.phone);
-    }
-
-    // Foreground messages (app open)
-    onMessage(messaging, function(payload){
-      var title = (payload.notification && payload.notification.title) ? payload.notification.title : 'MW Cosmetics';
-      var body  = (payload.notification && payload.notification.body)  ? payload.notification.body  : '';
-      // Show as toast + browser notification
-      showToast('🔔 '+title+': '+body);
-      if(Notification.permission === 'granted'){
-        new Notification(title, {
-          body: body,
-          icon: '/CosmrticsMW/icon-192.png'
+      // Save user ID to OneSignal for targeting
+      if(me && me.phone){
+        await OneSignal.login(me.phone);
+        // Tag user with role for segmentation
+        await OneSignal.User.addTags({
+          phone: me.phone,
+          name:  me.name  || '',
+          role:  me.role  || 'customer'
         });
       }
-    });
-
-  }catch(e){ console.log('FCM error:', e.message); }
+      // Request permission
+      await OneSignal.Notifications.requestPermission();
+    }catch(e){ console.log('OneSignal error:', e); }
+  });
 }
 
-// Send push notification to specific user (admin only)
-window.sendPushToUser = async function(phone, title, body){
+// Send notification to ALL users (admin only)
+window.sendPushToAll = async function(title, body){
   try{
-    var tokenDoc = await getDoc(doc(db,'fcm_tokens',phone));
-    if(!tokenDoc.exists()){ showToast('❌ المستخدم لا يملك إشعارات مفعّلة'); return; }
-    var token = tokenDoc.data().token;
-
-    // Save to push_queue - sw.js will handle sending
-    await setDoc(doc(db,'push_queue', Date.now().toString()),{
-      token: token,
-      title: title,
-      body:  body,
-      phone: phone,
-      sent:  false,
-      createdAt: new Date().toISOString()
+    var resp = await fetch('https://onesignal.com/api/v1/notifications',{
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        app_id:             'e9bd9007-1e73-4d4f-895f-10e1999c9952',
+        included_segments:  ['All'],
+        headings:           { ar: title, en: title },
+        contents:           { ar: body,  en: body  },
+        url:                'https://hosammn.github.io/CosmrticsMW',
+        chrome_web_icon:    'https://hosammn.github.io/CosmrticsMW/icon-192.png',
+        firefox_icon:       'https://hosammn.github.io/CosmrticsMW/icon-192.png'
+      })
     });
-    showToast('📲 تم إرسال الإشعار!');
+    var data = await resp.json();
+    if(data.id){ showToast('📲 تم إرسال الإشعار للجميع!'); }
+    else { showToast('❌ خطأ: '+JSON.stringify(data.errors)); }
   }catch(e){ showToast('❌ خطأ: '+e.message); }
 };
 
-// Send push to ALL users
-window.sendPushToAll = async function(title, body){
+// Send notification to specific user by phone
+window.sendPushToUser = async function(phone, title, body){
   try{
-    var snap = await getDocs(collection(db,'fcm_tokens'));
-    var batch = [];
-    snap.forEach(function(d){
-      batch.push(setDoc(doc(db,'push_queue', Date.now().toString()+'_'+d.id),{
-        token: d.data().token,
-        title: title,
-        body:  body,
-        phone: d.id,
-        sent:  false,
-        createdAt: new Date().toISOString()
-      }));
+    var resp = await fetch('https://onesignal.com/api/v1/notifications',{
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        app_id:           'e9bd9007-1e73-4d4f-895f-10e1999c9952',
+        filters:          [{ field:'tag', key:'phone', relation:'=', value: phone }],
+        headings:         { ar: title, en: title },
+        contents:         { ar: body,  en: body  },
+        url:              'https://hosammn.github.io/CosmrticsMW',
+        chrome_web_icon:  'https://hosammn.github.io/CosmrticsMW/icon-192.png'
+      })
     });
-    await Promise.all(batch);
-    showToast('📲 تم الإرسال لجميع المستخدمين!');
+    var data = await resp.json();
+    if(data.id){ showToast('📲 تم إرسال الإشعار!'); }
+    else { showToast('❌ خطأ'); }
   }catch(e){ showToast('❌ خطأ: '+e.message); }
+};
+
+// Send to admin only
+window.sendPushToAdmin = async function(title, body){
+  await window.sendPushToUser('07705868700', title, body);
 };
 
 // Register Service Worker (required for TWA)
