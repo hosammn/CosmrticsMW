@@ -9,12 +9,11 @@
     OneSignalDeferred.push(async function(OneSignal) {
       await OneSignal.init({
         appId: "e9bd9007-1e73-4d4f-895f-10e1999c9952",
-        serviceWorkerPath: "OneSignalSDKWorker.js",
+        serviceWorkerPath: "https://hosammn.github.io/OneSignalSDKWorker.js",
         serviceWorkerParam: { scope: "/" },
         notifyButton: { enable: false },
         allowLocalhostAsSecureOrigin: true
       });
-      // Auto prompt after init
       await OneSignal.Slidedown.promptPush();
     });
   </script>
