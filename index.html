@@ -3480,28 +3480,27 @@ function initOneSignal(){
 }
 
 // Send notification to ALL users (admin only)
-// OneSignal REST helper
+// OneSignal - save to Firestore, SW picks it up
 async function onesignalSend(payload){
   try{
     payload.app_id          = 'e9bd9007-1e73-4d4f-895f-10e1999c9952';
     payload.url             = 'https://hosammn.github.io/CosmrticsMW';
     payload.chrome_web_icon = 'https://hosammn.github.io/CosmrticsMW/icon-192.png';
-    payload.firefox_icon    = 'https://hosammn.github.io/CosmrticsMW/icon-192.png';
-    payload.small_icon      = 'icon-192';
 
-    // Save to Firestore push_queue - notifications are sent via OneSignal
-    // Use no-cors mode to avoid CORS issues from GitHub Pages
-    var resp = await fetch('https://onesignal.com/api/v1/notifications',{
-      method:  'POST',
-      mode:    'no-cors',
-      headers: {
-        'Content-Type':  'application/json',
-        'Authorization': 'Key njn27yluwezpmrxxmnxmq622v'
-      },
-      body: JSON.stringify(payload)
+    // Save to Firestore - OneSignalSDKWorker.js will send it
+    var pushId = 'push_'+Date.now();
+    await setDoc(doc(db,'push_queue', pushId), {
+      payload:   payload,
+      sent:      false,
+      createdAt: new Date().toISOString()
     });
-    // no-cors returns opaque response, assume success
-    return { id: 'sent' };
+
+    // Also try direct send via image beacon (no CORS)
+    var encoded = encodeURIComponent(JSON.stringify(payload));
+    var img = new Image();
+    img.src = 'https://onesignal.com/api/v1/notifications?data='+encoded;
+
+    return { id: pushId };
   }catch(e){ console.log('OneSignal send error:', e); return null; }
 }
 
