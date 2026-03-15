@@ -9,17 +9,19 @@
     OneSignalDeferred.push(async function(OneSignal) {
       await OneSignal.init({
         appId: "e9bd9007-1e73-4d4f-895f-10e1999c9952",
-        serviceWorkerPath: "OneSignalSDKWorker.js",
+        serviceWorkerPath: "/CosmrticsMW/OneSignalSDKWorker.js",
         serviceWorkerParam: { scope: "/CosmrticsMW/" },
         notifyButton: { enable: false },
+        allowLocalhostAsSecureOrigin: true,
         promptOptions: {
           slidedown: {
             prompts: [{
               type: "push",
-              autoPrompt: false,
+              autoPrompt: true,
+              autoPromptDelay: 3,
               text: {
-                actionMessage: "MW Cosmetics تريد إرسال إشعارات لك من",
-                acceptButton: "السماح",
+                actionMessage: "🦋 MW Cosmetics تريد إرسال إشعارات لك",
+                acceptButton: "السماح ✅",
                 cancelButton: "لاحقاً"
               }
             }]
