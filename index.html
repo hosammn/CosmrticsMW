@@ -9,25 +9,13 @@
     OneSignalDeferred.push(async function(OneSignal) {
       await OneSignal.init({
         appId: "e9bd9007-1e73-4d4f-895f-10e1999c9952",
-        serviceWorkerPath: "/CosmrticsMW/OneSignalSDKWorker.js",
-        serviceWorkerParam: { scope: "/CosmrticsMW/" },
+        serviceWorkerPath: "OneSignalSDKWorker.js",
+        serviceWorkerParam: { scope: "/" },
         notifyButton: { enable: false },
-        allowLocalhostAsSecureOrigin: true,
-        promptOptions: {
-          slidedown: {
-            prompts: [{
-              type: "push",
-              autoPrompt: true,
-              autoPromptDelay: 3,
-              text: {
-                actionMessage: "🦋 MW Cosmetics تريد إرسال إشعارات لك",
-                acceptButton: "السماح ✅",
-                cancelButton: "لاحقاً"
-              }
-            }]
-          }
-        }
+        allowLocalhostAsSecureOrigin: true
       });
+      // Auto prompt after init
+      await OneSignal.Slidedown.promptPush();
     });
   </script>
   <meta name="mobile-web-app-capable" content="yes">
